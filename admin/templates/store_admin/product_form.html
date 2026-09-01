@@ -1,0 +1,147 @@
+{% extends "store_admin/base_admin.html" %}
+
+{% block title %}{% if is_edit %}Edit {{ product.name }}{% else %}Add Product{% endif %}{% endblock %}
+{% block nav_products %}class="active"{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{% if is_edit %}Edit product{% else %}Add product{% endif %}</h1>
+    {% if is_edit %}
+    <p class="page-header-meta">{{ product.name }}</p>
+    {% endif %}
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'store_admin:product_list' %}" class="btn btn-ghost">← Back to products</a>
+  </div>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="form-card" style="max-width:880px;">
+
+    <!-- Basic details -->
+    <h2 class="form-section-title">Basic details</h2>
+    <div class="form-grid">
+      <div class="form-group full-width">
+        <label class="form-label" for="name">Product name <span class="required" aria-hidden="true">*</span></label>
+        <input type="text" id="name" name="name" class="form-control"
+          value="{{ form_data.name|default:'' }}" required
+          aria-required="true" />
+      </div>
+
+      <div class="form-group full-width">
+        <label class="form-label" for="description">Description</label>
+        <textarea id="description" name="description" class="form-control" rows="4">{{ form_data.description|default:'' }}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="category_id">Category <span class="required" aria-hidden="true">*</span></label>
+        <select id="category_id" name="category_id" class="form-control" required aria-required="true">
+          <option value="">— Select category —</option>
+          {% for cat in categories %}
+          <option value="{{ cat.category_id }}"
+            {% if form_data.category_id == cat.category_id %}selected{% endif %}>
+            {{ cat.name }}{% if not cat.is_active %} (inactive){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="is_active">Status</label>
+        <div class="form-check" style="margin-top:.5rem;">
+          <input type="checkbox" id="is_active" name="is_active" value="1"
+            {% if form_data.is_active == True or form_data.is_active == '1' or form_data.is_active == 'True' %}checked{% endif %}
+          />
+          <label for="is_active">Active (visible to customers)</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pricing -->
+    <h2 class="form-section-title" style="margin-top:2rem;">Pricing</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="price">Price (LKR) <span class="required" aria-hidden="true">*</span></label>
+        <input type="number" id="price" name="price" class="form-control"
+          value="{{ form_data.price|default:'' }}" min="0" step="0.01"
+          required aria-required="true" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="stock_quantity">Stock quantity <span class="required" aria-hidden="true">*</span></label>
+        <input type="number" id="stock_quantity" name="stock_quantity" class="form-control"
+          value="{{ form_data.stock_quantity|default:'0' }}" min="0" step="1"
+          required aria-required="true" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="discount_type">Discount type</label>
+        <select id="discount_type" name="discount_type" class="form-control">
+          {% for dt in discount_types %}
+          <option value="{{ dt }}"
+            {% if form_data.discount_type == dt %}selected{% elif not form_data.discount_type and dt == 'NONE' %}selected{% endif %}>
+            {{ dt }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="discount_value">Discount value</label>
+        <input type="number" id="discount_value" name="discount_value" class="form-control"
+          value="{{ form_data.discount_value|default:'0' }}" min="0" step="0.01" />
+        <span class="form-hint">0 for no discount. Percentage: 1–100. Amount: positive value in LKR.</span>
+      </div>
+    </div>
+
+    <!-- Size & servings -->
+    <h2 class="form-section-title" style="margin-top:2rem;">Size &amp; servings <span style="font-weight:400;font-size:.9rem;color:var(--text-muted);">(optional)</span></h2>
+    <div class="form-grid cols-3">
+      <div class="form-group">
+        <label class="form-label" for="weight_value">Weight</label>
+        <input type="number" id="weight_value" name="weight_value" class="form-control"
+          value="{{ form_data.weight_value|default:'' }}" min="0" step="0.01" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="weight_unit">Weight unit</label>
+        <select id="weight_unit" name="weight_unit" class="form-control">
+          <option value="">—</option>
+          {% for unit in weight_units %}
+          <option value="{{ unit }}"
+            {% if form_data.weight_unit == unit %}selected{% endif %}>{{ unit }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="serving_count">Serves</label>
+        <input type="number" id="serving_count" name="serving_count" class="form-control"
+          value="{{ form_data.serving_count|default:'' }}" min="1" step="1" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="serving_unit">Serving unit</label>
+        <select id="serving_unit" name="serving_unit" class="form-control">
+          <option value="">—</option>
+          {% for unit in serving_units %}
+          <option value="{{ unit }}"
+            {% if form_data.serving_unit == unit %}selected{% endif %}>{{ unit }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">
+        {% if is_edit %}Save changes{% else %}Create product{% endif %}
+      </button>
+      <a href="{% url 'store_admin:product_list' %}" class="btn btn-ghost">Cancel</a>
+      {% if is_edit %}
+      <a href="{% url 'store_admin:product_images' product_id=product.product_id %}" class="btn btn-secondary">
+        Manage images →
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</form>
+{% endblock %}

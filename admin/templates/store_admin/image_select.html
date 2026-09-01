@@ -1,0 +1,70 @@
+{% extends "store_admin/base_admin.html" %}
+
+{% block title %}Select image — {{ product.name }}{% endblock %}
+{% block nav_products %}class="active"{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Select existing image</h1>
+    <p class="page-header-meta">{{ product.name }} — choose from the <code>cakes</code> bucket</p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'store_admin:product_images' product_id=product.product_id %}" class="btn btn-ghost">← Cancel</a>
+  </div>
+</div>
+
+<form method="post" action="{% url 'store_admin:image_select' product_id=product.product_id %}" novalidate>
+  {% csrf_token %}
+
+  {% if bucket_objects %}
+  <div class="form-card" style="margin-bottom:2rem;">
+    <h2 class="form-section-title">Images in <code>Off_Shelf/</code></h2>
+    <div class="bucket-grid" role="radiogroup" aria-label="Select an image">
+      {% for obj in bucket_objects %}
+        {% if obj.name and not obj.name|slice:"-1:" == "/" %}
+        <div class="bucket-item">
+          <label>
+            <input type="radio" name="storage_path" value="{{ obj.name }}" required />
+            <div class="bucket-item-img">
+              <!-- We can't easily render a preview without the public URL here,
+                   so we show the filename and rely on the alt text approach -->
+              <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.5rem;color:var(--beige-border);">🖼️</div>
+            </div>
+            <div class="bucket-item-name">{{ obj.name|slice:"11:" }}</div>
+          </label>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="form-card" style="max-width:480px;">
+    <h2 class="form-section-title">Image details</h2>
+    <div class="form-group" style="margin-bottom:1rem;">
+      <label class="form-label" for="select_alt_text">Alt text</label>
+      <input type="text" id="select_alt_text" name="alt_text" class="form-control"
+        value="{{ product.name }}" />
+    </div>
+    <div class="form-group" style="margin-bottom:1.5rem;">
+      <label class="form-check">
+        <input type="checkbox" name="make_primary" value="1" />
+        Set as primary image
+      </label>
+    </div>
+    <div class="form-actions" style="border-top:none;padding-top:0;margin-top:0;">
+      <button type="submit" class="btn btn-primary">Link image</button>
+      <a href="{% url 'store_admin:product_images' product_id=product.product_id %}" class="btn btn-ghost">Cancel</a>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon" aria-hidden="true">🗄️</div>
+    <h3>No objects found in <code>Off_Shelf/</code></h3>
+    <p>Upload images using the upload form instead, or check the Supabase Storage bucket directly.</p>
+    <a href="{% url 'store_admin:product_images' product_id=product.product_id %}" class="btn btn-primary">Back to images</a>
+  </div>
+  {% endif %}
+</form>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "store_admin/base_admin.html" %}
+
+{% block title %}Categories{% endblock %}
+{% block nav_categories %}class="active"{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Categories</h1>
+    <p class="page-header-meta">{{ categories|length }} categor{{ categories|length|pluralize:"y,ies" }} total</p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'store_admin:category_create' %}" class="btn btn-primary">+ Add category</a>
+  </div>
+</div>
+
+<div class="admin-table-wrap">
+  {% if categories %}
+  <table class="admin-table" aria-label="Categories">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Slug</th>
+        <th scope="col">Description</th>
+        <th scope="col">Status</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cat in categories %}
+      <tr>
+        <td><strong>{{ cat.name }}</strong></td>
+        <td><code>{{ cat.slug|default:"—" }}</code></td>
+        <td>{{ cat.description|default:"—"|truncatewords:12 }}</td>
+        <td>
+          {% if cat.is_active %}
+            <span class="chip chip-active">Active</span>
+          {% else %}
+            <span class="chip chip-inactive">Inactive</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="row-actions">
+            <a href="{% url 'store_admin:category_edit' category_id=cat.category_id %}" class="btn btn-ghost btn-sm">Edit</a>
+            <form method="post" action="{% url 'store_admin:category_toggle' category_id=cat.category_id %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm {% if cat.is_active %}btn-ghost{% else %}btn-secondary{% endif %}"
+                aria-label="{% if cat.is_active %}Disable {{ cat.name }}{% else %}Enable {{ cat.name }}{% endif %}">
+                {% if cat.is_active %}Disable{% else %}Enable{% endif %}
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="padding:3rem;text-align:center;color:var(--text-muted);">
+    <p>No categories yet.</p>
+    <a href="{% url 'store_admin:category_create' %}" class="btn btn-primary" style="margin-top:1rem;">Add first category</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

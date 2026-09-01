@@ -1,0 +1,106 @@
+{% extends "store_admin/base_admin.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block nav_dashboard %}class="active"{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="page-header-meta">Welcome back, {{ user.first_name|default:user.username }}.</p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'store_admin:product_create' %}" class="btn btn-primary">+ Add product</a>
+    <a href="{% url 'store_admin:category_create' %}" class="btn btn-secondary">+ Add category</a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Total products</div>
+    <div class="stat-value">{{ product_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Active</div>
+    <div class="stat-value success">{{ active_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Inactive</div>
+    <div class="stat-value danger">{{ inactive_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Out of stock</div>
+    <div class="stat-value warning">{{ out_of_stock_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Categories</div>
+    <div class="stat-value">{{ category_count }}</div>
+  </div>
+</div>
+
+<!-- Recent products -->
+<div class="admin-table-wrap">
+  <div style="padding:1rem 1.5rem;background:var(--cream-dark);border-bottom:var(--border);display:flex;align-items:center;justify-content:space-between;">
+    <h2 style="font-size:1rem;margin:0;">Recent products</h2>
+    <a href="{% url 'store_admin:product_list' %}" class="btn btn-ghost btn-sm">View all →</a>
+  </div>
+  {% if products %}
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th scope="col">Product</th>
+        <th scope="col">Category</th>
+        <th scope="col">Price</th>
+        <th scope="col">Stock</th>
+        <th scope="col">Status</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for product in products %}
+      <tr>
+        <td>
+          <div class="product-name-cell">
+            <div class="product-thumb" aria-hidden="true">
+              {% if product.primary_image %}
+                <img src="{{ product.primary_image.image_url }}" alt="" loading="lazy" />
+              {% else %}
+                <div class="product-thumb-placeholder">🎂</div>
+              {% endif %}
+            </div>
+            <div>
+              <div class="name">{{ product.name }}</div>
+            </div>
+          </div>
+        </td>
+        <td>{{ product.categories.name|default:"—" }}</td>
+        <td>{{ product.effective_price_display }}</td>
+        <td>
+          {% if product.in_stock %}
+            <span class="chip chip-stock">{{ product.stock_quantity }}</span>
+          {% else %}
+            <span class="chip chip-nostock">0</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if product.is_active %}
+            <span class="chip chip-active">Active</span>
+          {% else %}
+            <span class="chip chip-inactive">Inactive</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="row-actions">
+            <a href="{% url 'store_admin:product_edit' product_id=product.product_id %}" class="btn btn-ghost btn-sm">Edit</a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="padding:2rem;text-align:center;color:var(--text-muted);">No products yet. <a href="{% url 'store_admin:product_create' %}">Add one →</a></div>
+  {% endif %}
+</div>
+{% endblock %}

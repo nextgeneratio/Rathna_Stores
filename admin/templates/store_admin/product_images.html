@@ -1,0 +1,134 @@
+{% extends "store_admin/base_admin.html" %}
+
+{% block title %}Images — {{ product.name }}{% endblock %}
+{% block nav_products %}class="active"{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Product images</h1>
+    <p class="page-header-meta">{{ product.name }}</p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'store_admin:product_edit' product_id=product.product_id %}" class="btn btn-ghost">← Edit product</a>
+    <a href="{% url 'store_admin:product_list' %}" class="btn btn-ghost">All products</a>
+  </div>
+</div>
+
+<!-- ── Upload new image ─────────────────────────────────────── -->
+<div class="form-card" style="max-width:640px;margin-bottom:2rem;">
+  <h2 class="form-section-title">Upload new image</h2>
+  <form method="post" action="{% url 'store_admin:image_upload' product_id=product.product_id %}" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    <div class="form-grid">
+      <div class="form-group full-width">
+        <label class="form-label" for="image_file">
+          Image file <span class="required" aria-hidden="true">*</span>
+        </label>
+        <input type="file" id="image_file" name="image_file" class="form-control"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          required aria-required="true" />
+        <span class="form-hint">JPEG, PNG, WebP, or GIF. Max 5 MB.</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="upload_alt_text">Alt text</label>
+        <input type="text" id="upload_alt_text" name="alt_text" class="form-control"
+          value="{{ product.name }}" />
+        <span class="form-hint">Descriptive text for screen readers.</span>
+      </div>
+      <div class="form-group">
+        <label class="form-check">
+          <input type="checkbox" name="make_primary" value="1" />
+          Set as primary image
+        </label>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Upload</button>
+    </div>
+  </form>
+</div>
+
+<!-- ── Select from existing bucket objects ──────────────────── -->
+<div class="form-card" style="max-width:640px;margin-bottom:2rem;">
+  <h2 class="form-section-title">Select existing image from storage</h2>
+  <p class="text-muted" style="margin-bottom:1rem;">
+    Browse and link an existing image from the <code>cakes</code> bucket.
+  </p>
+  <a href="{% url 'store_admin:image_select' product_id=product.product_id %}" class="btn btn-secondary">
+    Browse bucket →
+  </a>
+</div>
+
+<!-- ── Current images ───────────────────────────────────────── -->
+<h2 style="font-size:1.25rem;margin-bottom:1rem;">
+  Current images ({{ images|length }})
+</h2>
+
+{% if images %}
+<div class="image-manager-grid">
+  {% for img in images %}
+  <div class="image-card {% if img.is_primary %}is-primary{% endif %}">
+    <div class="image-card-img">
+      <img src="{{ img.image_url }}" alt="{{ img.alt_text|default:product.name }}" loading="lazy" />
+    </div>
+    <div class="image-card-body">
+      {% if img.is_primary %}
+        <span class="chip chip-active" style="margin-bottom:.5rem;">Primary</span>
+      {% endif %}
+      <div class="image-card-meta">
+        Order: {{ img.display_order }}<br />
+        {{ img.alt_text|default:"No alt text"|truncatechars:40 }}
+      </div>
+
+      <!-- Edit alt text + order -->
+      <details style="margin-bottom:.5rem;">
+        <summary style="font-size:.8rem;cursor:pointer;color:var(--brown);">Edit details</summary>
+        <form method="post" action="{% url 'store_admin:image_edit' image_id=img.image_id %}" style="margin-top:.5rem;">
+          {% csrf_token %}
+          <input type="hidden" name="product_id" value="{{ product.product_id }}" />
+          <div class="form-group" style="margin-bottom:.5rem;">
+            <label class="form-label" for="alt_{{ img.image_id }}" style="font-size:.8rem;">Alt text</label>
+            <input type="text" id="alt_{{ img.image_id }}" name="alt_text" class="form-control" style="font-size:.875rem;padding:.35rem .5rem;"
+              value="{{ img.alt_text|default:'' }}" />
+          </div>
+          <div class="form-group" style="margin-bottom:.5rem;">
+            <label class="form-label" for="ord_{{ img.image_id }}" style="font-size:.8rem;">Display order</label>
+            <input type="number" id="ord_{{ img.image_id }}" name="display_order" class="form-control" style="font-size:.875rem;padding:.35rem .5rem;"
+              value="{{ img.display_order }}" min="0" />
+          </div>
+          <button type="submit" class="btn btn-sm btn-primary">Save</button>
+        </form>
+      </details>
+
+      <div class="image-card-actions">
+        {% if not img.is_primary %}
+        <form method="post" action="{% url 'store_admin:image_set_primary' image_id=img.image_id %}">
+          {% csrf_token %}
+          <input type="hidden" name="product_id" value="{{ product.product_id }}" />
+          <button type="submit" class="btn btn-sm btn-secondary">Set primary</button>
+        </form>
+        {% endif %}
+
+        <!-- Delete with confirmation -->
+        <form method="post" action="{% url 'store_admin:image_delete' image_id=img.image_id %}"
+          onsubmit="return confirm('Delete this image? This cannot be undone.');">
+          {% csrf_token %}
+          <input type="hidden" name="product_id" value="{{ product.product_id }}" />
+          <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state" style="padding:3rem 0;">
+  <div class="empty-state-icon" aria-hidden="true">🖼️</div>
+  <h3>No images yet</h3>
+  <p>Upload an image or select one from the storage bucket above.</p>
+</div>
+{% endif %}
+
+{% endblock %}

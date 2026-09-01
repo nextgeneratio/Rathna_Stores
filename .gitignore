@@ -216,3 +216,22 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+#superbase connection api
+.env.local
+
+#database query
+database.sql
+
+#UI/UX design
+/UI_UX
+#documentations
+create_report.py
+Rathna_Stores_Milestones_and_Setup_Challenges.docx
+
+#instrcution
+instruction.md
+
+#progress
+progress.md
+

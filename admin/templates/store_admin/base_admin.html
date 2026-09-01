@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Staff Panel{% endblock %} — Rathna Stores</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/rathna.css' %}" />
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <!-- Admin top nav -->
+  <nav class="site-nav" role="navigation" aria-label="Staff navigation">
+    <div class="container">
+      <a href="{% url 'cakes:catalogue' %}" class="nav-brand" aria-label="Rathna Stores — public shop">
+        Rathna Stores
+      </a>
+      <ul class="nav-links" role="list">
+        <li><a href="{% url 'store_admin:dashboard' %}" {% block nav_dashboard %}{% endblock %}>Dashboard</a></li>
+        <li><a href="{% url 'store_admin:product_list' %}" {% block nav_products %}{% endblock %}>Products</a></li>
+        <li><a href="{% url 'store_admin:category_list' %}" {% block nav_categories %}{% endblock %}>Categories</a></li>
+        <li><a href="{% url 'cakes:catalogue' %}">← Public shop</a></li>
+      </ul>
+      <div class="nav-actions">
+        <span style="color:rgba(255,255,255,.7);font-size:.875rem;">{{ user.username }}</span>
+        <form method="post" action="{% url 'logout' %}" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-ghost" style="color:rgba(255,255,255,.75);">Sign out</button>
+        </form>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Flash messages -->
+  {% if messages %}
+  <div class="container messages-container" role="alert" aria-live="polite">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }}">
+      <span>{{ message }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <main class="admin-main" id="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

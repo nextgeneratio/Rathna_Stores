@@ -1,0 +1,61 @@
+{% extends "store_admin/base_admin.html" %}
+
+{% block title %}{% if is_edit %}Edit {{ category.name }}{% else %}Add Category{% endif %}{% endblock %}
+{% block nav_categories %}class="active"{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{% if is_edit %}Edit category{% else %}Add category{% endif %}</h1>
+    {% if is_edit %}<p class="page-header-meta">{{ category.name }}</p>{% endif %}
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'store_admin:category_list' %}" class="btn btn-ghost">← Back to categories</a>
+  </div>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="form-card" style="max-width:560px;">
+    <h2 class="form-section-title">Category details</h2>
+    <div class="form-grid">
+      <div class="form-group full-width">
+        <label class="form-label" for="name">
+          Name <span class="required" aria-hidden="true">*</span>
+        </label>
+        <input type="text" id="name" name="name" class="form-control"
+          value="{{ form_data.name|default:'' }}" required aria-required="true" />
+      </div>
+
+      <div class="form-group full-width">
+        <label class="form-label" for="slug">Slug</label>
+        <input type="text" id="slug" name="slug" class="form-control"
+          value="{{ form_data.slug|default:'' }}"
+          placeholder="auto-generated from name" />
+        <span class="form-hint">Lowercase letters, numbers, and hyphens only. Auto-generated if left blank.</span>
+      </div>
+
+      <div class="form-group full-width">
+        <label class="form-label" for="description">Description</label>
+        <textarea id="description" name="description" class="form-control" rows="3">{{ form_data.description|default:'' }}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-check">
+          <input type="checkbox" name="is_active" value="1"
+            {% if form_data.is_active == True or form_data.is_active == '1' or form_data.is_active == 'True' %}checked{% elif not is_edit %}checked{% endif %}
+          />
+          Active (visible in public catalogue)
+        </label>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">
+        {% if is_edit %}Save changes{% else %}Create category{% endif %}
+      </button>
+      <a href="{% url 'store_admin:category_list' %}" class="btn btn-ghost">Cancel</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

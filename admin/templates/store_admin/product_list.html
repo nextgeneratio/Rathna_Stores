@@ -1,0 +1,97 @@
+{% extends "store_admin/base_admin.html" %}
+
+{% block title %}Products{% endblock %}
+{% block nav_products %}class="active"{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Products</h1>
+    <p class="page-header-meta">{{ products|length }} product{{ products|length|pluralize }} total</p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'store_admin:product_create' %}" class="btn btn-primary">+ Add product</a>
+  </div>
+</div>
+
+<div class="admin-table-wrap">
+  {% if products %}
+  <table class="admin-table" aria-label="Products">
+    <thead>
+      <tr>
+        <th scope="col">Product</th>
+        <th scope="col">Category</th>
+        <th scope="col">Price</th>
+        <th scope="col">Stock</th>
+        <th scope="col">Status</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for product in products %}
+      <tr>
+        <td>
+          <div class="product-name-cell">
+            <div class="product-thumb" aria-hidden="true">
+              {% if product.primary_image %}
+                <img src="{{ product.primary_image.image_url }}" alt="" loading="lazy" />
+              {% else %}
+                <div class="product-thumb-placeholder">🎂</div>
+              {% endif %}
+            </div>
+            <div>
+              <div class="name">{{ product.name }}</div>
+              {% if product.description %}
+              <div class="cat">{{ product.description|truncatewords:8 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </td>
+        <td>{{ product.categories.name|default:"—" }}</td>
+        <td>
+          {{ product.effective_price_display }}
+          {% if product.has_discount %}
+          <br /><span class="text-muted" style="font-size:.8rem;text-decoration:line-through;">{{ product.original_price_display }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if product.in_stock %}
+            <span class="chip chip-stock">{{ product.stock_quantity }}</span>
+          {% else %}
+            <span class="chip chip-nostock">Out of stock</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if product.is_active %}
+            <span class="chip chip-active">Active</span>
+          {% else %}
+            <span class="chip chip-inactive">Inactive</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="row-actions">
+            <a href="{% url 'store_admin:product_edit' product_id=product.product_id %}" class="btn btn-ghost btn-sm">Edit</a>
+            <a href="{% url 'store_admin:product_images' product_id=product.product_id %}" class="btn btn-ghost btn-sm">Images</a>
+            <a href="{% url 'cakes:product_detail' product_id=product.product_id %}" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">View</a>
+            <form method="post" action="{% url 'store_admin:product_toggle' product_id=product.product_id %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm {% if product.is_active %}btn-ghost{% else %}btn-secondary{% endif %}"
+                aria-label="{% if product.is_active %}Disable {{ product.name }}{% else %}Enable {{ product.name }}{% endif %}">
+                {% if product.is_active %}Disable{% else %}Enable{% endif %}
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="padding:3rem;text-align:center;color:var(--text-muted);">
+    <div style="font-size:3rem;margin-bottom:1rem;">🎂</div>
+    <p>No products yet.</p>
+    <a href="{% url 'store_admin:product_create' %}" class="btn btn-primary" style="margin-top:1rem;">Add first product</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

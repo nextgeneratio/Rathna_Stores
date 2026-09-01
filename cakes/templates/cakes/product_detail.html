@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ product.name }} — Rathna Stores{% endblock %}
+{% block meta_description %}{{ product.description|default:product.name|truncatewords:25 }}{% endblock %}
+
+{% block extra_head %}
+<!-- Minimal JS for gallery thumbnail switching -->
+{% endblock %}
+
+{% block content %}
+<section class="product-detail-section">
+  <div class="container">
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="{% url 'cakes:catalogue' %}">All Cakes</a>
+      <span class="breadcrumb-sep" aria-hidden="true">›</span>
+      {% if category.name %}
+        <a href="{% url 'cakes:catalogue' %}?category={{ category.category_id }}">{{ category.name }}</a>
+        <span class="breadcrumb-sep" aria-hidden="true">›</span>
+      {% endif %}
+      <span aria-current="page">{{ product.name }}</span>
+    </nav>
+
+    <div class="product-detail-grid">
+
+      <!-- ── Gallery ──────────────────────────────────────── -->
+      <div>
+        <div class="gallery-main" id="gallery-main" aria-label="Product image">
+          {% if product.primary_image %}
+            <img
+              id="gallery-main-img"
+              src="{{ product.primary_image.image_url }}"
+              alt="{{ product.primary_image.alt_text|default:product.name }}"
+              width="600" height="600"
+            />
+          {% else %}
+            <div class="gallery-placeholder" aria-hidden="true">🎂</div>
+          {% endif %}
+        </div>
+
+        {% if product.images|length > 1 %}
+        <div class="gallery-thumbs" role="list" aria-label="Image gallery">
+          {% for img in product.images %}
+          <button
+            class="thumb-btn {% if img.is_primary %}active{% endif %}"
+            data-src="{{ img.image_url }}"
+            data-alt="{{ img.alt_text|default:product.name }}"
+            aria-label="View image {{ forloop.counter }}: {{ img.alt_text|default:product.name }}"
+            type="button"
+          >
+            <img src="{{ img.image_url }}" alt="" aria-hidden="true" loading="lazy" />
+          </button>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- ── Product info ─────────────────────────────────── -->
+      <div class="product-info-panel">
+        {% if category.name %}
+          <p class="product-category-tag">{{ category.name }}</p>
+        {% endif %}
+
+        <h1 class="product-name">{{ product.name }}</h1>
+
+        <!-- Price block -->
+        <div class="product-price-block">
+          <span class="product-price" aria-label="Price {{ product.effective_price_display }}">
+            {{ product.effective_price_display }}
+          </span>
+          {% if product.has_discount %}
+            <span class="product-price-original" aria-label="Original price {{ product.original_price_display }}">
+              {{ product.original_price_display }}
+            </span>
+            <span class="product-discount-badge" aria-label="{{ product.discount_display }}">
+              {{ product.discount_display }}
+            </span>
+          {% endif %}
+        </div>
+
+        <!-- Stock status -->
+        {% if product.in_stock %}
+          <span class="stock-badge in-stock" role="status">In stock</span>
+        {% else %}
+          <span class="stock-badge out-of-stock" role="status">Out of stock</span>
+        {% endif %}
+
+        <!-- Product meta -->
+        <div class="product-meta" aria-label="Product details">
+          {% if product.weight_value and product.weight_unit %}
+          <div class="meta-item">
+            <span class="meta-label">Weight</span>
+            <span class="meta-value">{{ product.weight_value }} {{ product.weight_unit }}</span>
+          </div>
+          {% endif %}
+          {% if product.serving_count %}
+          <div class="meta-item">
+            <span class="meta-label">Serves</span>
+            <span class="meta-value">{{ product.serving_count }}{% if product.serving_unit %} {{ product.serving_unit }}{% endif %}</span>
+          </div>
+          {% endif %}
+          <div class="meta-item">
+            <span class="meta-label">Stock</span>
+            <span class="meta-value">{{ product.stock_quantity }} available</span>
+          </div>
+        </div>
+
+        <!-- Description -->
+        {% if product.description %}
+        <div class="product-description">
+          {{ product.description|linebreaksbr }}
+        </div>
+        {% endif %}
+
+        <!-- Delivery notice (configurable placeholder) -->
+        <div class="delivery-notice" role="note">
+          <strong>Delivery information:</strong>
+          Orders are typically prepared within 2–3 business days.
+          Delivery available across Colombo and selected areas. Contact us for custom delivery arrangements.
+        </div>
+
+        <!-- CTA — cart/order not yet implemented -->
+        <div>
+          {% if product.in_stock %}
+            <span class="cta-coming-soon" role="note" aria-label="Add to cart — coming soon">
+              🛒 Add to cart — coming soon
+            </span>
+          {% else %}
+            <span class="cta-coming-soon" aria-label="Out of stock">
+              😔 Currently out of stock
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>{# /product-detail-grid #}
+  </div>{# /container #}
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     REVIEWS
+     ══════════════════════════════════════════════════════════ -->
+<section class="reviews-section">
+  <div class="container">
+    <h2>Customer reviews</h2>
+
+    {% if review_count > 0 %}
+    <div class="reviews-summary" aria-label="Review summary">
+      <span class="rating-big" aria-label="{{ average_rating }} out of 5">{{ average_rating }}</span>
+      <div>
+        <div class="rating-stars" aria-hidden="true">
+          {% with avg_int=average_rating|floatformat:"0" %}
+          {% for i in "12345" %}
+            {% if forloop.counter <= avg_int|add:"0" %}★{% else %}☆{% endif %}
+          {% endfor %}
+          {% endwith %}
+        </div>
+        <p class="rating-count">Based on {{ review_count }} review{{ review_count|pluralize }}</p>
+      </div>
+    </div>
+
+    {% for review in reviews %}
+    <article class="review-card" aria-label="Review by {{ review.customers.first_name }} {{ review.customers.last_name }}">
+      <div class="review-header">
+        <div>
+          <span class="reviewer-name">
+            {{ review.customers.first_name }} {{ review.customers.last_name|slice:":1" }}.
+          </span>
+          <span class="review-date text-muted">
+            — {{ review.created_at|slice:":10" }}
+          </span>
+        </div>
+        <span class="review-rating" aria-label="{{ review.rating }} out of 5 stars">
+          {% for i in "12345" %}
+            {% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}
+          {% endfor %}
+        </span>
+      </div>
+      {% if review.message %}
+      <p class="review-message">{{ review.message }}</p>
+      {% endif %}
+    </article>
+    {% endfor %}
+
+    {% else %}
+    <p class="text-muted">No reviews yet. Be the first to try this cake!</p>
+    {% endif %}
+
+    <p class="text-muted" style="margin-top:1.5rem;font-size:.875rem;">
+      Review submission is coming soon.
+    </p>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    var mainImg = document.getElementById('gallery-main-img');
+    var thumbBtns = document.querySelectorAll('.thumb-btn');
+
+    thumbBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (mainImg) {
+          mainImg.src = btn.dataset.src;
+          mainImg.alt = btn.dataset.alt;
+        }
+        thumbBtns.forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+      });
+    });
+  })();
+</script>
+{% endblock %}

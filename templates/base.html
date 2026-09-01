@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="{% block meta_description %}Rathna Stores — handcrafted cakes for every occasion.{% endblock %}" />
+  <title>{% block title %}Rathna Stores{% endblock %}</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/rathna.css' %}" />
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <!-- ── Navigation ──────────────────────────────────────── -->
+  <nav class="site-nav" role="navigation" aria-label="Main navigation">
+    <div class="container">
+      <a href="{% url 'cakes:catalogue' %}" class="nav-brand" aria-label="Rathna Stores — Home">
+        Rathna Stores
+      </a>
+
+      <button class="nav-toggle" aria-expanded="false" aria-controls="nav-links" aria-label="Toggle menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      <ul class="nav-links" id="nav-links" role="list">
+        <li><a href="{% url 'cakes:catalogue' %}#shop" {% block nav_shop_active %}{% endblock %}>Shop</a></li>
+        <li><a href="{% url 'cakes:catalogue' %}">All Cakes</a></li>
+        <!-- Placeholder links — pages not yet built -->
+        <li><a href="#" aria-disabled="true" title="Coming soon">Custom Orders</a></li>
+        <li><a href="#" aria-disabled="true" title="Coming soon">About</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        {% if user.is_authenticated and user.is_staff %}
+          <a href="{% url 'store_admin:dashboard' %}" class="btn btn-sm btn-secondary">Staff Panel</a>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Flash messages ──────────────────────────────────── -->
+  {% if messages %}
+    <div class="container messages-container" role="alert" aria-live="polite">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }}">
+          <span>{{ message }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- ── Main content ────────────────────────────────────── -->
+  <main id="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ── Footer ──────────────────────────────────────────── -->
+  <footer class="site-footer" id="contact" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-brand">Rathna Stores</div>
+          <p class="footer-tagline">
+            Handcrafted cakes baked with love, delivering sweetness to every celebration in Sri Lanka.
+          </p>
+        </div>
+        <div>
+          <h2 class="footer-heading">Shop</h2>
+          <ul class="footer-links">
+            <li><a href="{% url 'cakes:catalogue' %}">All Cakes</a></li>
+            <li><a href="{% url 'cakes:catalogue' %}?in_stock=1">In Stock</a></li>
+            <li><a href="#">Custom Orders <span style="font-size:.75em;">(coming soon)</span></a></li>
+          </ul>
+        </div>
+        <div>
+          <h2 class="footer-heading">Contact Us</h2>
+          <div class="footer-contact">
+            <!-- Placeholder business info — update with confirmed details -->
+            <p>📍 Colombo, Sri Lanka</p>
+            <p>📞 +94 77 123 4567</p>
+            <p>✉️ hello@rathnastores.lk</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; {% now "Y" %} Rathna Stores. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ── Minimal JS for mobile nav ───────────────────────── -->
+  <script>
+    (function () {
+      var toggle = document.querySelector('.nav-toggle');
+      var navLinks = document.getElementById('nav-links');
+      if (toggle && navLinks) {
+        toggle.addEventListener('click', function () {
+          var open = navLinks.classList.toggle('open');
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+      }
+    })();
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
