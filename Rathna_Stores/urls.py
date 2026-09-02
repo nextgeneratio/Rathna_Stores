@@ -8,6 +8,9 @@ urlpatterns = [
     # Public cake catalogue — root of the site
     path("", include("cakes.urls", namespace="cakes")),
 
+    # Guest cart
+    path("cart/", include("cart.urls", namespace="cart")),
+
     # Staff product management interface
     path("manage/", include("admin.urls", namespace="store_admin")),
 

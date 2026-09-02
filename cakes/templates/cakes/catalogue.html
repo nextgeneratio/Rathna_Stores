@@ -13,30 +13,276 @@
 
 {% block nav_shop_active %}class="active"{% endblock %}
 
+{% block extra_head %}
+<style>
+/* ── Showcase hero: layout and transitions ────────────────────── */
+.showcase {
+  position: relative;
+  overflow: hidden;
+  background: var(--cocoa);
+  min-height: 480px;
+}
+.showcase-slides {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.showcase-slide {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: var(--sp-12);
+  padding: var(--sp-16) var(--sp-6);
+  max-width: var(--max-w);
+  margin-inline: auto;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .55s ease, visibility .55s;
+}
+.showcase-slide.is-active {
+  opacity: 1;
+  visibility: visible;
+  position: relative; /* take up space when active */
+}
+/* reduced-motion: no fade, show first slide statically */
+@media (prefers-reduced-motion: reduce) {
+  .showcase-slide { transition: none; }
+}
+
+.showcase-text { position: relative; z-index: 1; }
+.showcase-eyebrow {
+  display: inline-block;
+  color: var(--gold);
+  font-size: .875rem;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: var(--sp-3);
+}
+.showcase h1 {
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  color: var(--cream);
+  line-height: 1.15;
+  margin-bottom: var(--sp-3);
+}
+.showcase-price {
+  font-size: 1.4rem;
+  color: var(--gold);
+  font-weight: 700;
+  margin-bottom: var(--sp-5);
+}
+.showcase-price-original {
+  font-size: .9rem;
+  color: rgba(250,246,241,.5);
+  text-decoration: line-through;
+  margin-left: var(--sp-2);
+  font-weight: 400;
+}
+.showcase-actions { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+
+.showcase-image-wrap {
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  aspect-ratio: 4/3;
+  background: rgba(255,255,255,.06);
+  box-shadow: 0 12px 40px rgba(0,0,0,.35);
+}
+.showcase-image-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Controls */
+.showcase-controls {
+  position: absolute;
+  bottom: var(--sp-5);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  z-index: 10;
+}
+.showcase-btn {
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.25);
+  color: var(--cream);
+  border-radius: 50%;
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background .18s;
+  flex-shrink: 0;
+}
+.showcase-btn:hover { background: rgba(255,255,255,.28); }
+.showcase-btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.showcase-dots {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+}
+.showcase-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.35);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background .18s, transform .18s;
+}
+.showcase-dot.is-active {
+  background: var(--gold);
+  transform: scale(1.3);
+}
+.showcase-dot:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.showcase-pause-btn {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  color: rgba(255,255,255,.75);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: .75rem;
+  cursor: pointer;
+  transition: background .18s;
+  white-space: nowrap;
+}
+.showcase-pause-btn:hover { background: rgba(255,255,255,.22); }
+.showcase-pause-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* Live region for slide announcements */
+.showcase-live { position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; }
+
+@media (max-width: 768px) {
+  .showcase-slide { grid-template-columns: 1fr; }
+  .showcase-image-wrap { display: none; }
+  .showcase { min-height: auto; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 
 <!-- ══════════════════════════════════════════════════════════
-     HERO (only when no filters are active)
+     HERO: Product showcase (only on unfiltered home view)
      ══════════════════════════════════════════════════════════ -->
 {% if not has_filters %}
-<section class="hero" aria-label="Welcome to Rathna Stores">
-  <div class="container">
-    <div class="hero-text">
-      <span class="hero-eyebrow">Handcrafted with love</span>
-      <h1>Cakes that make<br>moments unforgettable</h1>
-      <p class="hero-desc">
-        Fresh, custom-baked cakes for birthdays, weddings, and every sweet celebration.
-        Delivered with care across Sri Lanka.
-      </p>
-      <a href="#shop" class="btn btn-primary btn-lg">
-        Shop all cakes
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-      </a>
+<section class="showcase" aria-label="Featured cakes showcase"
+         id="showcase-section">
+
+  <!-- Accessible live region for slide announcements -->
+  <div class="showcase-live" aria-live="polite" aria-atomic="true" id="showcase-announce"></div>
+
+  <div class="showcase-slides" id="showcase-slides">
+
+    {% if showcase_products %}
+
+      {% for product in showcase_products %}
+      <div class="showcase-slide {% if forloop.first %}is-active{% endif %}"
+           id="slide-{{ forloop.counter0 }}"
+           role="group"
+           aria-label="Slide {{ forloop.counter }} of {{ showcase_products|length }}: {{ product.name }}"
+           aria-roledescription="slide">
+
+        <div class="showcase-text">
+          <span class="showcase-eyebrow">Handcrafted with love</span>
+          <h1>{{ product.name }}</h1>
+          <div class="showcase-price">
+            {{ product.effective_price_display }}
+            {% if product.has_discount %}
+              <span class="showcase-price-original">{{ product.original_price_display }}</span>
+            {% endif %}
+          </div>
+          <div class="showcase-actions">
+            <a href="{% url 'cakes:product_detail' product_id=product.product_id %}"
+               class="btn btn-primary btn-lg">
+              View cake
+            </a>
+            <a href="#shop" class="btn btn-secondary btn-lg"
+               style="color:var(--cream);border-color:rgba(255,255,255,.4);">
+              Shop all
+            </a>
+          </div>
+        </div>
+
+        <div class="showcase-image-wrap">
+          {% if product.primary_image %}
+            <img src="{{ product.primary_image.image_url }}"
+                 alt="{{ product.primary_image.alt_text|default:product.name }}"
+                 width="600" height="450"
+                 {% if forloop.first %}loading="eager"{% else %}loading="lazy"{% endif %} />
+          {% else %}
+            <img src="{% static 'images/cakes/default-cake.jpg' %}"
+                 alt="{{ product.name }}"
+                 width="600" height="450"
+                 {% if forloop.first %}loading="eager"{% else %}loading="lazy"{% endif %} />
+          {% endif %}
+        </div>
+
+      </div>
+      {% endfor %}
+
+      <!-- Showcase controls (prev / dots / pause / next) -->
+      {% if showcase_products|length > 1 %}
+      <div class="showcase-controls" role="group" aria-label="Showcase navigation">
+        <button class="showcase-btn" id="showcase-prev" aria-label="Previous slide">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+
+        <div class="showcase-dots" role="tablist" aria-label="Go to slide">
+          {% for product in showcase_products %}
+          <button class="showcase-dot {% if forloop.first %}is-active{% endif %}"
+                  role="tab"
+                  aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+                  aria-controls="slide-{{ forloop.counter0 }}"
+                  aria-label="Go to slide {{ forloop.counter }}: {{ product.name }}"
+                  data-index="{{ forloop.counter0 }}">
+          </button>
+          {% endfor %}
+        </div>
+
+        <button class="showcase-pause-btn" id="showcase-pause"
+                aria-pressed="false" aria-label="Pause auto-rotation">
+          Pause
+        </button>
+
+        <button class="showcase-btn" id="showcase-next" aria-label="Next slide">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
+      {% endif %}
+
+    {% else %}
+    <!-- Fallback: no eligible products with images -->
+    <div class="showcase-slide is-active"
+         role="group" aria-label="Welcome to Rathna Stores">
+      <div class="showcase-text">
+        <span class="showcase-eyebrow">Handcrafted with love</span>
+        <h1>Cakes that make<br>moments unforgettable</h1>
+        <div class="showcase-actions">
+          <a href="#shop" class="btn btn-primary btn-lg">Shop all cakes</a>
+        </div>
+      </div>
+      <div class="showcase-image-wrap">
+        <img src="{% static 'images/cakes/default-cake.jpg' %}"
+             alt="A beautifully decorated layered cake"
+             width="600" height="450"
+             loading="eager" />
+      </div>
     </div>
-    <div class="hero-image" aria-hidden="true">
-      <span class="hero-image-placeholder">🎂</span>
-    </div>
-  </div>
+    {% endif %}
+
+  </div>{# /showcase-slides #}
 </section>
 {% endif %}
 
@@ -67,20 +313,13 @@
         <form class="filter-panel" method="get" action="" id="filter-form">
           <h3>Filter cakes</h3>
 
-          <!-- Search -->
           <div class="filter-group">
             <label for="q">Search</label>
-            <input
-              type="search"
-              id="q"
-              name="q"
-              value="{{ search }}"
-              placeholder="Name or description…"
-              aria-label="Search cakes by name or description"
-            />
+            <input type="search" id="q" name="q" value="{{ search }}"
+                   placeholder="Name or description…"
+                   aria-label="Search cakes by name or description" />
           </div>
 
-          <!-- Category -->
           <div class="filter-group">
             <label for="category">Category</label>
             <select id="category" name="category" aria-label="Filter by category">
@@ -94,7 +333,6 @@
             </select>
           </div>
 
-          <!-- Price range -->
           <div class="filter-group">
             <label for="price">Price range</label>
             <select id="price" name="price" aria-label="Filter by price range">
@@ -108,24 +346,23 @@
             </select>
           </div>
 
-          <!-- In stock -->
           <div class="filter-group">
             <label class="filter-checkbox">
               <input type="checkbox" name="in_stock" value="1"
                 {% if in_stock_only %}checked{% endif %}
-                aria-label="Show in-stock cakes only"
-              />
+                aria-label="Show in-stock cakes only" />
               In stock only
             </label>
           </div>
 
           <div class="filter-actions">
-            <button type="submit" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;">
+            <button type="submit" class="btn btn-primary btn-sm"
+                    style="width:100%;justify-content:center;">
               Apply filters
             </button>
             {% if has_filters %}
-            <a href="{% url 'cakes:catalogue' %}" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;"
-               aria-label="Clear all filters">
+            <a href="{% url 'cakes:catalogue' %}" class="btn btn-ghost btn-sm"
+               style="width:100%;justify-content:center;" aria-label="Clear all filters">
               Clear all
             </a>
             {% endif %}
@@ -135,7 +372,6 @@
 
       <!-- ── Product grid ──────────────────────────────── -->
       <div>
-        <!-- Active filter chips -->
         {% if has_filters %}
         <div class="active-filters" aria-label="Active filters">
           {% if search %}
@@ -181,19 +417,19 @@
         <ul class="product-grid" role="list">
           {% for product in products %}
           <li class="product-card">
+            <!-- Image + info link -->
             <a href="{% url 'cakes:product_detail' product_id=product.product_id %}"
                class="product-card-link"
-               aria-label="View {{ product.name }}{% if not product.in_stock %} — out of stock{% endif %}">
+               aria-label="{{ product.name }}{% if not product.in_stock %} — out of stock{% endif %}">
               <div class="card-image-wrap">
                 {% if product.primary_image %}
-                  <img
-                    src="{{ product.primary_image.image_url }}"
-                    alt="{{ product.primary_image.alt_text|default:product.name }}"
-                    loading="lazy"
-                    width="400" height="300"
-                  />
+                  <img src="{{ product.primary_image.image_url }}"
+                       alt="{{ product.primary_image.alt_text|default:product.name }}"
+                       loading="lazy" width="400" height="300" />
                 {% else %}
-                  <div class="card-image-placeholder" aria-hidden="true">🎂</div>
+                  <img src="{% static 'images/cakes/default-cake.jpg' %}"
+                       alt="{{ product.name }}"
+                       loading="lazy" width="400" height="300" />
                 {% endif %}
                 {% if not product.in_stock %}
                   <span class="card-badge out-of-stock" aria-label="Out of stock">Out of stock</span>
@@ -202,28 +438,47 @@
                 {% endif %}
               </div>
               <div class="card-body">
-                {% with cat=product.categories %}
-                  {% if cat %}
-                  <p class="card-category">{{ cat.name }}</p>
-                  {% endif %}
-                {% endwith %}
+                {% if product.categories.name %}
+                <p class="card-category">{{ product.categories.name }}</p>
+                {% endif %}
                 <h2 class="card-name">{{ product.name }}</h2>
                 <div class="card-price-row">
                   <span class="card-price">{{ product.effective_price_display }}</span>
                   {% if product.has_discount %}
-                    <span class="card-price-original" aria-label="Original price {{ product.original_price_display }}">{{ product.original_price_display }}</span>
+                    <span class="card-price-original"
+                          aria-label="Original price {{ product.original_price_display }}">
+                      {{ product.original_price_display }}
+                    </span>
                   {% endif %}
                 </div>
               </div>
             </a>
+
+            <!-- Add to cart — outside the link to avoid nested interactive element -->
+            {% if product.in_stock %}
+            <div class="card-add-to-cart">
+              <form method="post" action="{% url 'cart:add' %}">
+                {% csrf_token %}
+                <input type="hidden" name="product_id" value="{{ product.product_id }}" />
+                <input type="hidden" name="quantity" value="1" />
+                <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+                <button type="submit" class="btn btn-primary btn-sm card-add-btn"
+                        aria-label="Add {{ product.name }} to cart">
+                  Add to cart
+                </button>
+              </form>
+            </div>
+            {% endif %}
           </li>
           {% endfor %}
         </ul>
 
         {% else %}
-        <!-- Empty state -->
         <div class="empty-state">
-          <div class="empty-state-icon" aria-hidden="true">🍰</div>
+          <div class="empty-state-img">
+            <img src="{% static 'images/cakes/default-cake.jpg' %}"
+                 alt="No cakes found" loading="lazy" width="200" height="200" />
+          </div>
           <h3>No cakes found</h3>
           <p>
             {% if has_filters %}
@@ -237,10 +492,128 @@
           {% endif %}
         </div>
         {% endif %}
-      </div>
+      </div>{# /product grid col #}
 
     </div>{# /catalogue-layout #}
   </div>{# /container #}
 </section>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  'use strict';
+
+  var section = document.getElementById('showcase-section');
+  if (!section) return;
+
+  var slides = Array.from(section.querySelectorAll('.showcase-slide'));
+  if (slides.length <= 1) return;
+
+  var dots     = Array.from(section.querySelectorAll('.showcase-dot'));
+  var prevBtn  = section.querySelector('#showcase-prev');
+  var nextBtn  = section.querySelector('#showcase-next');
+  var pauseBtn = section.querySelector('#showcase-pause');
+  var announce = section.querySelector('#showcase-announce');
+
+  var current = 0;
+  var paused  = false;
+  var timer   = null;
+  var INTERVAL = 5000;
+
+  /* Respect prefers-reduced-motion — no auto-rotation */
+  var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function goTo(index) {
+    slides[current].classList.remove('is-active');
+    slides[current].setAttribute('aria-hidden', 'true');
+    if (dots[current]) {
+      dots[current].classList.remove('is-active');
+      dots[current].setAttribute('aria-selected', 'false');
+    }
+
+    current = (index + slides.length) % slides.length;
+
+    slides[current].classList.add('is-active');
+    slides[current].removeAttribute('aria-hidden');
+    if (dots[current]) {
+      dots[current].classList.add('is-active');
+      dots[current].setAttribute('aria-selected', 'true');
+    }
+
+    /* Announce to screen readers politely */
+    if (announce) {
+      announce.textContent = 'Slide ' + (current + 1) + ' of ' + slides.length + ': ' +
+        (slides[current].getAttribute('aria-label') || '');
+    }
+  }
+
+  function startTimer() {
+    if (prefersReduced || paused) return;
+    clearInterval(timer);
+    timer = setInterval(function () { goTo(current + 1); }, INTERVAL);
+  }
+
+  function stopTimer() { clearInterval(timer); }
+
+  function pauseOnInteraction() {
+    if (!paused) {
+      stopTimer();
+      /* Resume after 12 s of inactivity */
+      clearTimeout(section._resumeTimeout);
+      section._resumeTimeout = setTimeout(function () {
+        if (!paused) startTimer();
+      }, 12000);
+    }
+  }
+
+  /* Initialise hidden state */
+  slides.forEach(function (s, i) {
+    if (i !== 0) s.setAttribute('aria-hidden', 'true');
+  });
+
+  /* Wire controls */
+  if (prevBtn) {
+    prevBtn.addEventListener('click', function () {
+      goTo(current - 1);
+      pauseOnInteraction();
+    });
+  }
+  if (nextBtn) {
+    nextBtn.addEventListener('click', function () {
+      goTo(current + 1);
+      pauseOnInteraction();
+    });
+  }
+  dots.forEach(function (dot) {
+    dot.addEventListener('click', function () {
+      goTo(parseInt(dot.dataset.index, 10));
+      pauseOnInteraction();
+    });
+  });
+  if (pauseBtn) {
+    pauseBtn.addEventListener('click', function () {
+      paused = !paused;
+      pauseBtn.setAttribute('aria-pressed', paused ? 'true' : 'false');
+      pauseBtn.textContent = paused ? 'Play' : 'Pause';
+      if (paused) { stopTimer(); } else { startTimer(); }
+    });
+  }
+
+  /* Pause on hover / focus */
+  section.addEventListener('mouseenter', stopTimer);
+  section.addEventListener('mouseleave', function () { if (!paused) startTimer(); });
+  section.addEventListener('focusin', stopTimer);
+  section.addEventListener('focusout', function () { if (!paused) startTimer(); });
+
+  /* Keyboard: left/right arrows */
+  section.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft')  { goTo(current - 1); pauseOnInteraction(); }
+    if (e.key === 'ArrowRight') { goTo(current + 1); pauseOnInteraction(); }
+  });
+
+  if (!prefersReduced) startTimer();
+})();
+</script>
 {% endblock %}

@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'admin.apps.AdminConfig',
     'cakes.apps.CakesConfig',
     'customers.apps.CustomersConfig',
+    'cart.apps.CartConfig',
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -71,6 +72,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'cart.context_processors.cart_count',
             ],
         },
     },

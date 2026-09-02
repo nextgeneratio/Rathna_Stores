@@ -36,7 +36,10 @@
               width="600" height="600"
             />
           {% else %}
-            <div class="gallery-placeholder" aria-hidden="true">🎂</div>
+            <img id="gallery-main-img"
+                 src="{% static 'images/cakes/default-cake.jpg' %}"
+                 alt="{{ product.name }}"
+                 width="600" height="600" />
           {% endif %}
         </div>
 
@@ -121,16 +124,37 @@
           Delivery available across Colombo and selected areas. Contact us for custom delivery arrangements.
         </div>
 
-        <!-- CTA — cart/order not yet implemented -->
+        <!-- Add to cart / out-of-stock CTA -->
         <div>
           {% if product.in_stock %}
-            <span class="cta-coming-soon" role="note" aria-label="Add to cart — coming soon">
-              🛒 Add to cart — coming soon
-            </span>
+          <form method="post" action="{% url 'cart:add' %}"
+                aria-label="Add {{ product.name }} to cart">
+            {% csrf_token %}
+            <input type="hidden" name="product_id" value="{{ product.product_id }}" />
+            <input type="hidden" name="next"
+                   value="{% url 'cakes:product_detail' product_id=product.product_id %}" />
+            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+              <div class="qty-control detail-qty" role="group" aria-label="Quantity">
+                <button type="button" class="qty-btn qty-btn--dec"
+                        aria-label="Decrease quantity"
+                        onclick="stepQty(this.form.quantity, -1)">−</button>
+                <input type="number" name="quantity" value="1"
+                       min="1" max="{{ product.stock_quantity }}"
+                       class="qty-input"
+                       aria-label="Quantity" style="width:60px;" />
+                <button type="button" class="qty-btn qty-btn--inc"
+                        aria-label="Increase quantity"
+                        onclick="stepQty(this.form.quantity, 1)">+</button>
+              </div>
+              <button type="submit" class="btn btn-primary btn-lg">
+                Add to cart
+              </button>
+            </div>
+          </form>
           {% else %}
-            <span class="cta-coming-soon" aria-label="Out of stock">
-              😔 Currently out of stock
-            </span>
+          <span class="stock-badge out-of-stock" style="font-size:1rem;padding:.5rem 1.25rem;">
+            Currently out of stock
+          </span>
           {% endif %}
         </div>
       </div>
@@ -213,5 +237,12 @@
       });
     });
   })();
+
+  function stepQty(input, delta) {
+    var val = parseInt(input.value, 10) || 1;
+    var min = parseInt(input.min, 10) || 1;
+    var max = parseInt(input.max, 10) || Infinity;
+    input.value = Math.min(max, Math.max(min, val + delta));
+  }
 </script>
 {% endblock %}

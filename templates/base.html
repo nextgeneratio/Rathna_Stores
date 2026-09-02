@@ -18,7 +18,8 @@
       </a>
 
       <button class="nav-toggle" aria-expanded="false" aria-controls="nav-links" aria-label="Toggle menu">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <line x1="3" y1="6" x2="21" y2="6"/>
           <line x1="3" y1="12" x2="21" y2="12"/>
           <line x1="3" y1="18" x2="21" y2="18"/>
@@ -28,13 +29,28 @@
       <ul class="nav-links" id="nav-links" role="list">
         <li><a href="{% url 'cakes:catalogue' %}#shop" {% block nav_shop_active %}{% endblock %}>Shop</a></li>
         <li><a href="{% url 'cakes:catalogue' %}">All Cakes</a></li>
-        <!-- Placeholder links — pages not yet built -->
-        <li><a href="#" aria-disabled="true" title="Coming soon">Custom Orders</a></li>
-        <li><a href="#" aria-disabled="true" title="Coming soon">About</a></li>
+        <li><a href="#" aria-disabled="true" title="Coming soon" tabindex="-1">Custom Orders <span class="nav-coming-soon">soon</span></a></li>
         <li><a href="#contact">Contact</a></li>
       </ul>
 
       <div class="nav-actions">
+        <!-- Cart button with unit-count badge -->
+        <a href="{% url 'cart:cart' %}"
+           class="nav-cart-btn"
+           aria-label="Cart{% if cart_unit_count %}, {{ cart_unit_count }} item{{ cart_unit_count|pluralize }}{% else %}, empty{% endif %}">
+          <!-- Cart icon -->
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round"
+               stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+          </svg>
+          <span class="nav-cart-label">Cart</span>
+          {% if cart_unit_count %}
+          <span class="nav-cart-badge" aria-hidden="true">{{ cart_unit_count }}</span>
+          {% endif %}
+        </a>
+
         {% if user.is_authenticated and user.is_staff %}
           <a href="{% url 'store_admin:dashboard' %}" class="btn btn-sm btn-secondary">Staff Panel</a>
         {% endif %}
@@ -73,7 +89,7 @@
           <ul class="footer-links">
             <li><a href="{% url 'cakes:catalogue' %}">All Cakes</a></li>
             <li><a href="{% url 'cakes:catalogue' %}?in_stock=1">In Stock</a></li>
-            <li><a href="#">Custom Orders <span style="font-size:.75em;">(coming soon)</span></a></li>
+            <li><a href="{% url 'cart:cart' %}">Your Cart</a></li>
           </ul>
         </div>
         <div>
@@ -92,7 +108,7 @@
     </div>
   </footer>
 
-  <!-- ── Minimal JS for mobile nav ───────────────────────── -->
+  <!-- ── Minimal JS for mobile nav (no-op if JS unavailable) ── -->
   <script>
     (function () {
       var toggle = document.querySelector('.nav-toggle');

@@ -13,7 +13,7 @@ from .services import (
 
 def catalogue(request):
     """
-    Root page — public cake catalogue.
+    Root page — public cake catalogue with product showcase hero.
     Supports GET params: q (search), category, price, in_stock.
     """
     search = request.GET.get("q", "").strip()
@@ -52,6 +52,15 @@ def catalogue(request):
 
     has_filters = bool(search or category_id or price_preset or in_stock_only)
 
+    # Showcase products for hero (only on unfiltered home view)
+    showcase_products = []
+    if not has_filters:
+        try:
+            from cart.services import get_showcase_products
+            showcase_products = get_showcase_products(limit=5)
+        except Exception:
+            showcase_products = []
+
     context = {
         "products": products,
         "categories": categories,
@@ -64,6 +73,7 @@ def catalogue(request):
         "active_price_label": active_price_label,
         "has_filters": has_filters,
         "product_count": len(products),
+        "showcase_products": showcase_products,
     }
     return render(request, "cakes/catalogue.html", context)
 

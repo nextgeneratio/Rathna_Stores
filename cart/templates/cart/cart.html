@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Your Cart — Rathna Stores{% endblock %}
+{% block meta_description %}Review the cakes in your cart before placing an order.{% endblock %}
+
+{% block content %}
+<section class="cart-section">
+  <div class="container">
+
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="{% url 'cakes:catalogue' %}">Shop</a>
+      <span class="breadcrumb-sep" aria-hidden="true">›</span>
+      <span aria-current="page">Your Cart</span>
+    </nav>
+
+    <div class="page-header" style="margin-bottom:2rem;">
+      <div>
+        <h1>Your Cart</h1>
+        {% if cart.total_items > 0 %}
+        <p class="page-header-meta">
+          {{ cart.total_items }} item{{ cart.total_items|pluralize }}
+          &nbsp;·&nbsp;
+          {{ cart.total_units }} unit{{ cart.total_units|pluralize }}
+        </p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if cart.items %}
+    <div class="cart-layout">
+
+      <!-- ── Cart items ──────────────────────────────────── -->
+      <div class="cart-items-col">
+
+        <!-- Unavailability warning banner -->
+        {% for item in cart.items %}{% if not item.is_available %}
+        {% if forloop.first %}
+        <div class="alert alert-warning" role="alert" style="margin-bottom:1.5rem;">
+          One or more items in your cart are no longer available. Please review and remove them before checking out.
+        </div>
+        {% endif %}
+        {% endif %}{% endfor %}
+
+        <div class="cart-items-list" role="list" aria-label="Cart items">
+          {% for item in cart.items %}
+          <article class="cart-item {% if not item.is_available %}cart-item--unavailable{% endif %}"
+                   role="listitem"
+                   aria-label="{{ item.product.name }}{% if not item.is_available %} — unavailable{% endif %}">
+
+            <!-- Product image -->
+            <div class="cart-item-image" aria-hidden="true">
+              {% if item.primary_image %}
+                <img src="{{ item.primary_image.image_url }}"
+                     alt="{{ item.primary_image.alt_text|default:item.product.name }}"
+                     loading="lazy" width="100" height="100" />
+              {% else %}
+                <img src="{% static 'images/cakes/default-cake.jpg' %}"
+                     alt="Default cake image"
+                     loading="lazy" width="100" height="100" />
+              {% endif %}
+            </div>
+
+            <!-- Item details -->
+            <div class="cart-item-details">
+              <div class="cart-item-header">
+                <div>
+                  <a href="{% url 'cakes:product_detail' product_id=item.product_id %}"
+                     class="cart-item-name">
+                    {{ item.product.name }}
+                  </a>
+                  {% if item.product.categories.name %}
+                  <p class="cart-item-category">{{ item.product.categories.name }}</p>
+                  {% endif %}
+                </div>
+                <div class="cart-item-price-col">
+                  <span class="cart-item-price">{{ item.unit_price_display }}</span>
+                  {% if item.has_discount %}
+                  <span class="cart-item-price-original"
+                        aria-label="Original price {{ item.original_price_display }}">
+                    {{ item.original_price_display }}
+                  </span>
+                  <span class="cart-item-discount-badge">{{ item.discount_display }}</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Availability notice -->
+              {% if not item.is_available %}
+              <div class="cart-item-unavailable-notice" role="alert">
+                <span class="cart-item-unavailable-icon" aria-hidden="true">⚠️</span>
+                {{ item.availability_note }}
+              </div>
+              {% endif %}
+
+              <!-- Quantity + remove controls -->
+              <div class="cart-item-controls">
+                <!-- Quantity update form -->
+                <form method="post" action="{% url 'cart:update' %}"
+                      class="qty-form"
+                      aria-label="Update quantity for {{ item.product.name }}">
+                  {% csrf_token %}
+                  <input type="hidden" name="cart_item_id" value="{{ item.cart_item_id }}" />
+                  <div class="qty-control" role="group" aria-label="Quantity">
+                    <button type="submit" name="quantity" value="{{ item.quantity|add:'-1' }}"
+                            class="qty-btn qty-btn--dec"
+                            aria-label="Decrease quantity">−</button>
+                    <input type="number"
+                           name="quantity"
+                           value="{{ item.quantity }}"
+                           min="0"
+                           max="{{ item.product.stock_quantity }}"
+                           class="qty-input"
+                           aria-label="Quantity for {{ item.product.name }}"
+                           form="qty-form-{{ item.cart_item_id }}" />
+                    <button type="submit" name="quantity" value="{{ item.quantity|add:'1' }}"
+                            class="qty-btn qty-btn--inc"
+                            {% if item.quantity >= item.product.stock_quantity %}disabled{% endif %}
+                            aria-label="Increase quantity">+</button>
+                  </div>
+                </form>
+
+                <!-- Remove form -->
+                <form method="post" action="{% url 'cart:remove' %}"
+                      aria-label="Remove {{ item.product.name }} from cart">
+                  {% csrf_token %}
+                  <input type="hidden" name="cart_item_id" value="{{ item.cart_item_id }}" />
+                  <button type="submit" class="btn btn-ghost btn-sm cart-remove-btn"
+                          aria-label="Remove {{ item.product.name }}">
+                    Remove
+                  </button>
+                </form>
+              </div>
+
+            </div>
+
+            <!-- Line total -->
+            <div class="cart-item-line-total" aria-label="Line total">
+              {% if item.is_available %}
+                <span class="cart-line-total-value">{{ item.line_total_display }}</span>
+              {% else %}
+                <span class="cart-line-total-unavail">—</span>
+              {% endif %}
+            </div>
+
+          </article>
+          {% endfor %}
+        </div>{# /cart-items-list #}
+
+        <!-- Back to shop link -->
+        <div style="margin-top:1.5rem;">
+          <a href="{% url 'cakes:catalogue' %}" class="btn btn-ghost">
+            ← Continue shopping
+          </a>
+        </div>
+      </div>{# /cart-items-col #}
+
+      <!-- ── Order summary ───────────────────────────────── -->
+      <aside class="cart-summary-col" aria-label="Order summary">
+        <div class="cart-summary-card">
+          <h2 class="cart-summary-title">Order summary</h2>
+
+          <div class="cart-summary-row">
+            <span>Subtotal ({{ cart.total_units }} unit{{ cart.total_units|pluralize }})</span>
+            <span class="cart-summary-amount">{{ cart.subtotal_display }}</span>
+          </div>
+          <div class="cart-summary-row cart-summary-row--muted">
+            <span>Delivery</span>
+            <span>Calculated at checkout</span>
+          </div>
+          <div class="cart-summary-row cart-summary-total">
+            <span>Estimated total</span>
+            <span class="cart-summary-amount">{{ cart.subtotal_display }}</span>
+          </div>
+
+          <!-- PayNow placeholder -->
+          {% if cart.has_purchasable_items %}
+          <a href="{% url 'cart:pay_now' %}"
+             class="btn btn-primary btn-lg cart-paynow-btn"
+             aria-describedby="paynow-note">
+            PayNow
+          </a>
+          <p class="cart-paynow-note" id="paynow-note" role="note">
+            Secure checkout coming soon. No payment will be processed.
+          </p>
+          {% else %}
+          <div class="cart-no-items-note" role="note">
+            Remove unavailable items to proceed.
+          </div>
+          {% endif %}
+
+          <div class="cart-summary-meta">
+            <p>🔒 Your session cart is private and stored securely.</p>
+          </div>
+        </div>
+      </aside>
+
+    </div>{# /cart-layout #}
+
+    {% else %}
+    <!-- ── Empty cart ──────────────────────────────────────── -->
+    <div class="empty-state cart-empty-state">
+      <div class="cart-empty-image">
+        <img src="{% static 'images/cakes/default-cake.jpg' %}"
+             alt="A delicious cake waiting to be ordered"
+             width="300" height="300"
+             loading="eager" />
+      </div>
+      <h2>Your cart is empty</h2>
+      <p>Looks like you haven't added any cakes yet. Browse our collection and find your favourite!</p>
+      <a href="{% url 'cakes:catalogue' %}" class="btn btn-primary btn-lg">
+        Browse all cakes
+      </a>
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  /* Progressive enhancement: sync the number input value to submit buttons */
+  (function () {
+    document.querySelectorAll('.qty-form').forEach(function (form) {
+      var input = form.querySelector('.qty-input');
+      var decBtn = form.querySelector('.qty-btn--dec');
+      var incBtn = form.querySelector('.qty-btn--inc');
+      if (!input) return;
+
+      function syncButtons() {
+        var val = parseInt(input.value, 10) || 0;
+        var max = parseInt(input.max, 10) || Infinity;
+        if (decBtn) {
+          decBtn.value = Math.max(0, val - 1);
+          decBtn.disabled = val <= 0;
+        }
+        if (incBtn) {
+          incBtn.value = val + 1;
+          incBtn.disabled = val >= max;
+        }
+      }
+
+      input.addEventListener('change', syncButtons);
+      input.addEventListener('input', syncButtons);
+      syncButtons();
+    });
+  })();
+</script>
+{% endblock %}
