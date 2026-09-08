@@ -107,19 +107,6 @@
   gap: var(--sp-3);
   z-index: 10;
 }
-.showcase-btn {
-  background: rgba(255,255,255,.15);
-  border: 1px solid rgba(255,255,255,.25);
-  color: var(--cream);
-  border-radius: 50%;
-  width: 38px; height: 38px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  transition: background .18s;
-  flex-shrink: 0;
-}
-.showcase-btn:hover { background: rgba(255,255,255,.28); }
-.showcase-btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .showcase-dots {
   display: flex;
   gap: var(--sp-2);
@@ -139,19 +126,6 @@
   transform: scale(1.3);
 }
 .showcase-dot:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
-.showcase-pause-btn {
-  background: rgba(255,255,255,.1);
-  border: 1px solid rgba(255,255,255,.2);
-  color: rgba(255,255,255,.75);
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: .75rem;
-  cursor: pointer;
-  transition: background .18s;
-  white-space: nowrap;
-}
-.showcase-pause-btn:hover { background: rgba(255,255,255,.22); }
-.showcase-pause-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 /* Live region for slide announcements */
 .showcase-live { position: absolute; width: 1px; height: 1px; overflow: hidden;
@@ -226,16 +200,9 @@
       </div>
       {% endfor %}
 
-      <!-- Showcase controls (prev / dots / pause / next) -->
+      <!-- Showcase controls -->
       {% if showcase_products|length > 1 %}
       <div class="showcase-controls" role="group" aria-label="Showcase navigation">
-        <button class="showcase-btn" id="showcase-prev" aria-label="Previous slide">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
-        </button>
-
         <div class="showcase-dots" role="tablist" aria-label="Go to slide">
           {% for product in showcase_products %}
           <button class="showcase-dot {% if forloop.first %}is-active{% endif %}"
@@ -247,18 +214,6 @@
           </button>
           {% endfor %}
         </div>
-
-        <button class="showcase-pause-btn" id="showcase-pause"
-                aria-pressed="false" aria-label="Pause auto-rotation">
-          Pause
-        </button>
-
-        <button class="showcase-btn" id="showcase-next" aria-label="Next slide">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        </button>
       </div>
       {% endif %}
 
@@ -512,9 +467,6 @@
   if (slides.length <= 1) return;
 
   var dots     = Array.from(section.querySelectorAll('.showcase-dot'));
-  var prevBtn  = section.querySelector('#showcase-prev');
-  var nextBtn  = section.querySelector('#showcase-next');
-  var pauseBtn = section.querySelector('#showcase-pause');
   var announce = section.querySelector('#showcase-announce');
 
   var current = 0;
@@ -573,33 +525,13 @@
     if (i !== 0) s.setAttribute('aria-hidden', 'true');
   });
 
-  /* Wire controls */
-  if (prevBtn) {
-    prevBtn.addEventListener('click', function () {
-      goTo(current - 1);
-      pauseOnInteraction();
-    });
-  }
-  if (nextBtn) {
-    nextBtn.addEventListener('click', function () {
-      goTo(current + 1);
-      pauseOnInteraction();
-    });
-  }
+  /* Wire slide indicators */
   dots.forEach(function (dot) {
     dot.addEventListener('click', function () {
       goTo(parseInt(dot.dataset.index, 10));
       pauseOnInteraction();
     });
   });
-  if (pauseBtn) {
-    pauseBtn.addEventListener('click', function () {
-      paused = !paused;
-      pauseBtn.setAttribute('aria-pressed', paused ? 'true' : 'false');
-      pauseBtn.textContent = paused ? 'Play' : 'Pause';
-      if (paused) { stopTimer(); } else { startTimer(); }
-    });
-  }
 
   /* Pause on hover / focus */
   section.addEventListener('mouseenter', stopTimer);
