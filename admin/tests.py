@@ -8,6 +8,7 @@ from unittest.mock import patch, MagicMock
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 
 def _make_category(**kw):
@@ -85,6 +86,56 @@ class StaffViewErrorHandlingTests(TestCase):
         pid = "bbbbbbbb-0000-0000-0000-000000000099"
         response = self.client.get(reverse("store_admin:product_images", args=[pid]))
         self.assertEqual(response.status_code, 404)
+
+
+class ImageUploadTests(TestCase):
+
+    def setUp(self):
+        self.client = Client()
+        User.objects.create_user("image_staff", password="pw", is_staff=True)
+        self.client.login(username="image_staff", password="pw")
+        self.product_id = "33333333-3333-4333-8333-333333333333"
+        self.product = {
+            "product_id": self.product_id,
+            "name": "Dark Mocha Cake",
+            "categories": {"slug": "chocolate"},
+        }
+
+    @patch("admin.views.set_primary_image")
+    @patch("admin.views.add_product_image")
+    @patch("admin.views.get_public_url", return_value="https://example.test/new.jpg")
+    @patch("admin.views.upload_image_to_storage", return_value="Off_Shelf/chocolate/new.jpg")
+    @patch("admin.views.get_images_for_product")
+    @patch("admin.views.get_product_by_id")
+    def test_primary_upload_is_inserted_before_promotion(
+        self,
+        mock_get_product,
+        mock_get_images,
+        mock_upload,
+        mock_public_url,
+        mock_add,
+        mock_set_primary,
+    ):
+        mock_get_product.return_value = self.product
+        mock_get_images.return_value = [
+            {"image_id": "old-image", "display_order": 0, "is_primary": True}
+        ]
+        mock_add.return_value = {"image_id": "new-image"}
+
+        response = self.client.post(
+            reverse("store_admin:image_upload", args=[self.product_id]),
+            {
+                "image_file": SimpleUploadedFile(
+                    "new.jpg", b"image data", content_type="image/jpeg"
+                ),
+                "make_primary": "1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        inserted_data = mock_add.call_args.args[0]
+        self.assertFalse(inserted_data["is_primary"])
+        mock_set_primary.assert_called_once_with(self.product_id, "new-image")
 
 
 class CategoryCreateTests(TestCase):

@@ -465,7 +465,7 @@ def image_upload(request, product_id):
                 "image_url": image_url,
                 "alt_text": alt_text,
                 "display_order": next_order,
-                "is_primary": is_first or make_primary,
+                "is_primary": is_first,
             }
         )
     except Exception as exc:
@@ -520,7 +520,7 @@ def image_select_existing(request, product_id):
                     "image_url": image_url,
                     "alt_text": alt_text,
                     "display_order": next_order,
-                    "is_primary": is_first or make_primary,
+                    "is_primary": is_first,
                 }
             )
             if make_primary or is_first:
