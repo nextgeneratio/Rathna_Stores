@@ -3,7 +3,7 @@ Cart views.
 
 All state-changing actions are POST-only with CSRF protection and PRG redirect.
 The cart page is a standard GET.
-PayNow is a placeholder — no payment, order, or stock decrement occurs.
+PayNow is gated behind customer authentication and remains a non-payment placeholder.
 """
 from __future__ import annotations
 
@@ -20,10 +20,19 @@ from .services import (
 )
 
 
-# ── Cart page ────────────────────────────────────────────────────────────────
+def _is_customer_authenticated(session) -> bool:
+    """Check whether a customer is authenticated in the session."""
+    try:
+        from customers.services import CUSTOMER_ID_SESSION_KEY
+        return bool(session.get(CUSTOMER_ID_SESSION_KEY))
+    except Exception:
+        return False
+
+
+# ── Cart page ─────────────────────────────────────────────────────────────────
 
 def cart_detail(request):
-    """Display the current session cart."""
+    """Display the current session/customer cart."""
     try:
         cart = get_cart(request.session)
     except Exception as exc:
@@ -42,14 +51,14 @@ def cart_detail(request):
     return render(request, "cart/cart.html", {"cart": cart})
 
 
-# ── Add to cart ──────────────────────────────────────────────────────────────
+# ── Add to cart ───────────────────────────────────────────────────────────────
 
 @require_POST
 def cart_add(request):
-    """POST: add a product to the cart."""
+    """POST: add a product to the cart. Works for both guest and authenticated users."""
     product_id = request.POST.get("product_id", "").strip()
     quantity_raw = request.POST.get("quantity", "1").strip()
-    redirect_to = request.POST.get("next", "cart:cart")
+    redirect_to = request.POST.get("next", "")
 
     try:
         quantity = int(quantity_raw)
@@ -62,13 +71,12 @@ def cart_add(request):
     except CartError as exc:
         messages.error(request, str(exc))
 
-    # Honour the `next` parameter only for safe relative paths
     if redirect_to and redirect_to.startswith("/") and not redirect_to.startswith("//"):
         return redirect(redirect_to)
     return redirect("cart:cart")
 
 
-# ── Update quantity ──────────────────────────────────────────────────────────
+# ── Update quantity ───────────────────────────────────────────────────────────
 
 @require_POST
 def cart_update(request):
@@ -94,7 +102,7 @@ def cart_update(request):
     return redirect("cart:cart")
 
 
-# ── Remove item ──────────────────────────────────────────────────────────────
+# ── Remove item ───────────────────────────────────────────────────────────────
 
 @require_POST
 def cart_remove(request):
@@ -110,16 +118,21 @@ def cart_remove(request):
     return redirect("cart:cart")
 
 
-# ── PayNow placeholder ────────────────────────────────────────────────────────
+# ── PayNow — authentication gated placeholder ─────────────────────────────────
 
 def pay_now_placeholder(request):
     """
-    Placeholder view for future payment integration.
+    Placeholder for future payment integration.
 
-    This view does NOT capture card data, call any external payment service,
-    create an order row, create a payment row, decrement stock,
-    or claim that payment has succeeded.
+    - Guests are redirected to login with /cart/pay/ as the safe return destination.
+    - Authenticated customers see the placeholder page which makes clear that
+      no payment is taken, no order is created, no stock is decremented.
 
-    It simply informs the visitor that checkout is coming soon.
+    This view does NOT call any payment service, create order/payment rows,
+    or decrement inventory.
     """
+    if not _is_customer_authenticated(request.session):
+        # Send guest to login, returning here after authentication
+        return redirect("/account/login/?next=/cart/pay/")
+
     return render(request, "cart/pay_now_placeholder.html")

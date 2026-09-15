@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Sign In — Rathna Stores{% endblock %}
+{% block meta_description %}Sign in to your Rathna Stores account.{% endblock %}
+
+{% block content %}
+<section class="auth-page">
+  <div class="container">
+    <div class="auth-card">
+      <div class="auth-logo">Rathna Stores</div>
+      <h1 class="auth-title">Sign in</h1>
+
+      <form method="post" action="{% url 'customers:login' %}{% if next %}?next={{ next }}{% endif %}" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}" />
+
+        <div class="form-group">
+          <label class="form-label" for="email">
+            Email address <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input type="email" id="email" name="email" class="form-control"
+                 value="{{ email }}" autocomplete="email" required autofocus />
+        </div>
+
+        <div class="form-group" style="margin-bottom:1.5rem;">
+          <label class="form-label" for="password">
+            Password <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input type="password" id="password" name="password" class="form-control"
+                 autocomplete="current-password" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
+          Sign in
+        </button>
+      </form>
+
+      <p class="auth-switch">
+        Don't have an account?
+        <a href="{% url 'customers:register' %}{% if next %}?next={{ next }}{% endif %}">Register</a>
+      </p>
+      <p class="auth-switch">
+        <a href="{% url 'cakes:catalogue' %}" style="font-size:.85rem;color:var(--text-muted);">
+          ← Back to shop
+        </a>
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
