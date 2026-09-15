@@ -37,11 +37,13 @@ PROFILE_BUCKET = "User_Profile"
 
 # The authenticated customer's customers.customer_id UUID (string)
 CUSTOMER_ID_SESSION_KEY = "rathna_customer_id"
-# The Supabase Auth access token (needed for authenticated API calls)
-# Stored only long enough to be used; cleared on logout
+# The Supabase Auth access token
 ACCESS_TOKEN_SESSION_KEY = "rathna_auth_token"
 # The Supabase Auth refresh token
 REFRESH_TOKEN_SESSION_KEY = "rathna_refresh_token"
+
+# Re-export the guest cart session key so tests can import it from one place
+from cart.services import SESSION_KEY  # noqa: E402 (placed after constants)
 
 # ── Allowed MIME types for profile images ────────────────────────────────────
 

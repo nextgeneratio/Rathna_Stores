@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_edit %}Edit Address{% else %}Add Address{% endif %} — Rathna Stores{% endblock %}
+
+{% block content %}
+<section style="padding:var(--sp-12) 0;flex:1;">
+  <div class="container" style="max-width:580px;">
+    <div class="page-header" style="margin-bottom:2rem;">
+      <div><h1>{% if is_edit %}Edit address{% else %}Add address{% endif %}</h1></div>
+      <div class="page-header-actions">
+        <a href="{% url 'customers:address_list' %}" class="btn btn-ghost">← Back</a>
+      </div>
+    </div>
+
+    <form method="post"
+          action="{% if is_edit %}{% url 'customers:address_edit' address_id=address.address_id %}{% else %}{% url 'customers:address_create' %}{% endif %}"
+          novalidate>
+      {% csrf_token %}
+      <div class="form-card">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label class="form-label" for="recipient_name">
+              Recipient name <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input type="text" id="recipient_name" name="recipient_name" class="form-control"
+                   value="{{ form_data.recipient_name|default:'' }}" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="phone_number">Phone number</label>
+            <input type="tel" id="phone_number" name="phone_number" class="form-control"
+                   value="{{ form_data.phone_number|default:'' }}" />
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label" for="address_line_1">
+              Address line 1 <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input type="text" id="address_line_1" name="address_line_1" class="form-control"
+                   value="{{ form_data.address_line_1|default:'' }}" required />
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label" for="address_line_2">Address line 2</label>
+            <input type="text" id="address_line_2" name="address_line_2" class="form-control"
+                   value="{{ form_data.address_line_2|default:'' }}" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="city">
+              City <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input type="text" id="city" name="city" class="form-control"
+                   value="{{ form_data.city|default:'' }}" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="district">District</label>
+            <input type="text" id="district" name="district" class="form-control"
+                   value="{{ form_data.district|default:'' }}" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="postal_code">Postal code</label>
+            <input type="text" id="postal_code" name="postal_code" class="form-control"
+                   value="{{ form_data.postal_code|default:'' }}" />
+          </div>
+          <div class="form-group">
+            <label class="form-check" style="margin-top:1.5rem;">
+              <input type="checkbox" name="is_default" value="1"
+                {% if form_data.is_default %}checked{% endif %} />
+              Set as default delivery address
+            </label>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            {% if is_edit %}Save changes{% else %}Add address{% endif %}
+          </button>
+          <a href="{% url 'customers:address_list' %}" class="btn btn-ghost">Cancel</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

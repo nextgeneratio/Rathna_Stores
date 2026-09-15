@@ -11,11 +11,11 @@
       <div class="auth-logo">Rathna Stores</div>
       <h1 class="auth-title">Sign in</h1>
 
-      <form method="post" action="{% url 'customers:login' %}{% if next %}?next={{ next }}{% endif %}" novalidate>
+      <form method="post" action="{% url 'customers:login' %}" novalidate>
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ next }}" />
 
-        <div class="form-group">
+        <div class="form-group" style="margin-bottom:1.25rem;">
           <label class="form-label" for="email">
             Email address <span class="required" aria-hidden="true">*</span>
           </label>
@@ -31,7 +31,8 @@
                  autocomplete="current-password" required />
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
+        <button type="submit" class="btn btn-primary"
+                style="width:100%;justify-content:center;">
           Sign in
         </button>
       </form>

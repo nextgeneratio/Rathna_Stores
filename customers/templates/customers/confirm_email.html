@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Check Your Email — Rathna Stores{% endblock %}
+
+{% block content %}
+<section style="padding:5rem 0;flex:1;text-align:center;">
+  <div class="container" style="max-width:520px;">
+    <div style="font-size:3.5rem;margin-bottom:1.5rem;" aria-hidden="true">✉️</div>
+    <h1 style="font-size:1.875rem;margin-bottom:1rem;">Check your email</h1>
+    <p style="color:var(--text-muted);font-size:1.05rem;line-height:1.75;margin-bottom:2rem;">
+      We've sent you a confirmation link. Please click it to activate your account,
+      then return here to sign in.
+    </p>
+    <div class="alert alert-info" role="note" style="text-align:left;margin-bottom:2rem;">
+      <strong>Didn't receive the email?</strong> Check your spam folder, or
+      <a href="{% url 'customers:register' %}">try registering again</a>.
+    </div>
+    <a href="{% url 'customers:login' %}" class="btn btn-primary">Go to sign in</a>
+  </div>
+</section>
+{% endblock %}

@@ -1474,3 +1474,218 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   .nav-cart-btn,
   .cart-item { transition: none; }
 }
+
+/* =============================================================
+   Phase 3 — Auth dialog, profile, nav account control
+   ============================================================= */
+
+/* ── Auth pages (login / register standalone) ─────────────── */
+.auth-page {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-12) var(--sp-6);
+  background: linear-gradient(135deg, var(--cocoa) 0%, #4a2511 100%);
+  min-height: calc(100vh - var(--nav-h) - 180px);
+}
+.auth-card {
+  background: var(--card-bg);
+  border-radius: var(--card-radius);
+  padding: var(--sp-10);
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+.auth-card--wide { max-width: 560px; }
+.auth-logo {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  color: var(--cocoa);
+  text-align: center;
+  margin-bottom: var(--sp-1);
+}
+.auth-title {
+  font-size: 1.4rem;
+  text-align: center;
+  margin-bottom: var(--sp-6);
+}
+.auth-switch {
+  text-align: center;
+  margin-top: var(--sp-4);
+  font-size: .875rem;
+  color: var(--text-muted);
+}
+.auth-switch-btn {
+  background: none;
+  border: none;
+  color: var(--brown);
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+  padding: 0;
+  text-decoration: underline;
+}
+.auth-switch-btn:hover { color: var(--brown-hover); }
+.auth-switch-btn:focus-visible { outline: 2px solid var(--gold); border-radius: 2px; }
+
+/* ── Auth dialog ───────────────────────────────────────────── */
+.auth-dialog {
+  border: none;
+  border-radius: var(--card-radius);
+  padding: 0;
+  max-width: 420px;
+  width: calc(100% - 2rem);
+  box-shadow: 0 24px 80px rgba(0,0,0,.4);
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+.auth-dialog::backdrop {
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(2px);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .auth-dialog[open] {
+    animation: dlg-in .22s ease;
+  }
+  @keyframes dlg-in {
+    from { opacity: 0; transform: translate(-50%, calc(-50% - 12px)); }
+    to   { opacity: 1; transform: translate(-50%, -50%); }
+  }
+}
+.auth-dialog.no-motion[open] { animation: none; }
+.auth-dialog-panel { padding: var(--sp-8); }
+.auth-dialog-close {
+  position: absolute;
+  top: var(--sp-3);
+  right: var(--sp-3);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: var(--sp-2);
+  border-radius: 6px;
+  line-height: 1;
+}
+.auth-dialog-close:hover { background: var(--beige); color: var(--text-dark); }
+.auth-dialog-close:focus-visible { outline: 2px solid var(--gold); }
+.auth-dialog-logo {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--cocoa);
+  text-align: center;
+  margin-bottom: var(--sp-1);
+}
+.auth-dialog-heading {
+  font-size: 1.25rem;
+  text-align: center;
+  margin-bottom: var(--sp-5);
+}
+.auth-dialog-form .btn { margin-top: var(--sp-3); }
+.auth-dialog .auth-switch { margin-top: var(--sp-4); }
+
+/* ── Nav profile dropdown ──────────────────────────────────── */
+.nav-profile-wrap { position: relative; }
+.nav-profile-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 999px;
+  padding: var(--sp-1) var(--sp-3) var(--sp-1) var(--sp-2);
+  cursor: pointer;
+  color: var(--cream);
+  font-family: var(--font-body);
+  font-size: .875rem;
+  transition: background .15s;
+}
+.nav-profile-btn:hover { background: rgba(255,255,255,.16); }
+.nav-profile-btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.nav-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,.25);
+  flex-shrink: 0;
+}
+.nav-profile-name {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav-profile-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--card-bg);
+  border: var(--border);
+  border-radius: var(--card-radius);
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.15);
+  z-index: 200;
+  overflow: hidden;
+}
+.nav-profile-menu[hidden] { display: none; }
+.nav-profile-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--sp-3) var(--sp-5);
+  font-size: .9375rem;
+  color: var(--text-body);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: background .12s;
+  text-decoration: none;
+}
+.nav-profile-item:hover { background: var(--cream); color: var(--brown); }
+.nav-profile-item:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.nav-profile-item--logout { color: #c0392b; }
+.nav-profile-item--logout:hover { background: #fceaea; }
+.nav-profile-divider { height: 1px; background: var(--beige-border); margin: var(--sp-1) 0; }
+
+/* ── Profile page ──────────────────────────────────────────── */
+.profile-header {
+  display: flex;
+  gap: var(--sp-6);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.profile-avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); }
+.profile-avatar {
+  width: 96px; height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--beige-border);
+  box-shadow: var(--card-shadow);
+  display: block;
+}
+.profile-avatar--default { background: var(--beige); }
+.profile-avatar-actions { display: flex; flex-direction: column; gap: var(--sp-1); align-items: center; }
+.profile-info { flex: 1; }
+.profile-name {
+  font-size: 1.5rem;
+  color: var(--cocoa);
+  margin-bottom: var(--sp-1);
+}
+.profile-email { color: var(--text-muted); font-size: .9375rem; margin-bottom: var(--sp-2); }
+
+/* ── Responsive: auth / profile ────────────────────────────── */
+@media (max-width: 600px) {
+  .auth-card, .auth-card--wide { padding: var(--sp-6); }
+  .auth-dialog-panel { padding: var(--sp-6); }
+  .nav-profile-name { display: none; }
+  .profile-header { flex-direction: column; align-items: center; text-align: center; }
+}
+
+/* ── Reduced motion: dialog ─────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .auth-dialog[open] { animation: none; }
+}

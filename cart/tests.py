@@ -401,10 +401,23 @@ class RemoveFromCartTests(TestCase):
     @patch("cart.services.get_supabase_client")
     def test_remove_success(self, mock_client):
         from cart.services import remove_from_cart
-        mock_client.return_value = _mock_supabase({
-            "carts": [_make_cart_row()],
-            "cart_items": [],
-        })
+        # Build a mock that satisfies _resolve_cart_identity → carts lookup → items lookup
+        cart_row_resp = MagicMock(data=[{"cart_id": "bbbbbbbb-0000-0000-0000-000000000001"}])
+        item_resp = MagicMock(data=[{
+            "cart_item_id": "dddddddd-0000-0000-0000-000000000001",
+            "quantity": 2,
+            "product_id": "aaaaaaaa-0000-0000-0000-000000000001",
+        }])
+        delete_resp = MagicMock(data=[])
+
+        inner = MagicMock()
+        inner.select.return_value = inner
+        inner.eq.return_value = inner
+        inner.limit.return_value = inner
+        inner.delete.return_value = inner
+        inner.execute.side_effect = [cart_row_resp, item_resp, delete_resp]
+        mock_client.return_value.table.return_value = inner
+
         session = {SESSION_KEY: "test-session-id"}
         remove_from_cart(session, "dddddddd-0000-0000-0000-000000000001")
 
@@ -532,10 +545,19 @@ class CartViewTests(TestCase):
         self.assertEqual(resp.status_code, 405)
 
     def test_pay_now_placeholder_returns_200(self):
+        from customers.services import CUSTOMER_ID_SESSION_KEY
+        # Must be authenticated to reach the placeholder page
+        session = self.client.session
+        session[CUSTOMER_ID_SESSION_KEY] = "cccccccc-0000-0000-0000-000000000001"
+        session.save()
         resp = self.client.get(reverse("cart:pay_now"))
         self.assertEqual(resp.status_code, 200)
 
     def test_pay_now_placeholder_says_not_available(self):
+        from customers.services import CUSTOMER_ID_SESSION_KEY
+        session = self.client.session
+        session[CUSTOMER_ID_SESSION_KEY] = "cccccccc-0000-0000-0000-000000000001"
+        session.save()
         resp = self.client.get(reverse("cart:pay_now"))
         self.assertContains(resp, "Payments are not available yet")
 

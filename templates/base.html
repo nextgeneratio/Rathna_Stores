@@ -29,16 +29,16 @@
       <ul class="nav-links" id="nav-links" role="list">
         <li><a href="{% url 'cakes:catalogue' %}#shop" {% block nav_shop_active %}{% endblock %}>Shop</a></li>
         <li><a href="{% url 'cakes:catalogue' %}">All Cakes</a></li>
-        <li><a href="#" aria-disabled="true" title="Coming soon" tabindex="-1">Custom Orders <span class="nav-coming-soon">soon</span></a></li>
+        <li><a href="#" aria-disabled="true" tabindex="-1" title="Coming soon">
+          Custom Orders <span class="nav-coming-soon">soon</span></a></li>
         <li><a href="#contact">Contact</a></li>
       </ul>
 
       <div class="nav-actions">
-        <!-- Cart button with unit-count badge -->
+        <!-- Cart button -->
         <a href="{% url 'cart:cart' %}"
            class="nav-cart-btn"
            aria-label="Cart{% if cart_unit_count %}, {{ cart_unit_count }} item{{ cart_unit_count|pluralize }}{% else %}, empty{% endif %}">
-          <!-- Cart icon -->
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
                stroke="currentColor" stroke-width="2" stroke-linecap="round"
                stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -51,28 +51,175 @@
           {% endif %}
         </a>
 
+        <!-- Customer auth control -->
+        {% if customer_authenticated and nav_customer %}
+          <!-- Signed-in: profile dropdown -->
+          <div class="nav-profile-wrap" id="nav-profile-wrap">
+            <button class="nav-profile-btn" id="nav-profile-btn"
+                    aria-haspopup="true" aria-expanded="false"
+                    aria-controls="nav-profile-menu"
+                    aria-label="Account menu for {{ nav_customer.first_name }}">
+              {% if nav_customer.profile_image_url %}
+                <img src="{{ nav_customer.profile_image_url }}"
+                     alt="{{ nav_customer.first_name }}"
+                     class="nav-avatar" width="32" height="32" />
+              {% else %}
+                <img src="{% static 'images/avatars/default-avatar.svg' %}"
+                     alt="Account"
+                     class="nav-avatar" width="32" height="32" />
+              {% endif %}
+              <span class="nav-profile-name">{{ nav_customer.first_name }}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div class="nav-profile-menu" id="nav-profile-menu"
+                 role="menu" aria-label="Account menu" hidden>
+              <a href="{% url 'customers:profile' %}" class="nav-profile-item" role="menuitem">
+                My Profile
+              </a>
+              <a href="{% url 'customers:address_list' %}" class="nav-profile-item" role="menuitem">
+                My Addresses
+              </a>
+              <a href="{% url 'cart:cart' %}" class="nav-profile-item" role="menuitem">
+                My Cart
+              </a>
+              <div class="nav-profile-divider" role="separator"></div>
+              <form method="post" action="{% url 'customers:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="nav-profile-item nav-profile-item--logout"
+                        role="menuitem">
+                  Sign out
+                </button>
+              </form>
+            </div>
+          </div>
+
+        {% else %}
+          <!-- Signed-out: open auth dialog or go to login page -->
+          <button class="btn btn-sm btn-secondary nav-login-btn"
+                  id="nav-login-btn"
+                  aria-haspopup="dialog"
+                  aria-label="Sign in or create account">
+            Sign in
+          </button>
+        {% endif %}
+
+        <!-- Staff panel (staff Django users only) -->
         {% if user.is_authenticated and user.is_staff %}
-          <a href="{% url 'store_admin:dashboard' %}" class="btn btn-sm btn-secondary">Staff Panel</a>
+          <a href="{% url 'store_admin:dashboard' %}" class="btn btn-sm btn-ghost"
+             style="color:rgba(255,255,255,.7);">Staff</a>
         {% endif %}
       </div>
     </div>
   </nav>
 
+  <!-- ── Auth dialog (login / register — progressive enhancement) ── -->
+  <dialog class="auth-dialog" id="auth-dialog"
+          aria-modal="true" aria-labelledby="auth-dialog-title">
+    <button class="auth-dialog-close" id="auth-dialog-close"
+            aria-label="Close sign-in dialog" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+
+    <!-- ── Login panel ────────────────────────────────────── -->
+    <div id="dialog-login-panel" class="auth-dialog-panel">
+      <div class="auth-dialog-logo">Rathna Stores</div>
+      <h2 id="auth-dialog-title" class="auth-dialog-heading">Sign in</h2>
+
+      <form method="post" action="{% url 'customers:login' %}" novalidate
+            id="dialog-login-form" class="auth-dialog-form">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="" class="dialog-next-input" />
+
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label class="form-label" for="dlg-email">Email</label>
+          <input type="email" id="dlg-email" name="email" class="form-control"
+                 autocomplete="email" required />
+        </div>
+        <div class="form-group" style="margin-bottom:1.25rem;">
+          <label class="form-label" for="dlg-password">Password</label>
+          <input type="password" id="dlg-password" name="password" class="form-control"
+                 autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn btn-primary"
+                style="width:100%;justify-content:center;">Sign in</button>
+      </form>
+      <p class="auth-switch">
+        No account?
+        <button type="button" class="auth-switch-btn" id="show-register-btn">Register</button>
+      </p>
+    </div>
+
+    <!-- ── Register panel ─────────────────────────────────── -->
+    <div id="dialog-register-panel" class="auth-dialog-panel" hidden>
+      <div class="auth-dialog-logo">Rathna Stores</div>
+      <h2 class="auth-dialog-heading">Create account</h2>
+
+      <form method="post" action="{% url 'customers:register' %}" novalidate
+            id="dialog-register-form" class="auth-dialog-form">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="" class="dialog-next-input" />
+
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:.75rem .75rem;">
+          <div class="form-group">
+            <label class="form-label" for="dlg-first-name">First name</label>
+            <input type="text" id="dlg-first-name" name="first_name" class="form-control"
+                   autocomplete="given-name" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="dlg-last-name">Last name</label>
+            <input type="text" id="dlg-last-name" name="last_name" class="form-control"
+                   autocomplete="family-name" required />
+          </div>
+        </div>
+        <div class="form-group" style="margin:.75rem 0;">
+          <label class="form-label" for="dlg-reg-email">Email</label>
+          <input type="email" id="dlg-reg-email" name="email" class="form-control"
+                 autocomplete="email" required />
+        </div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:.75rem .75rem;margin-bottom:.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="dlg-reg-pw">Password</label>
+            <input type="password" id="dlg-reg-pw" name="password" class="form-control"
+                   autocomplete="new-password" required />
+            <span class="form-hint">8+ chars</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="dlg-reg-pw2">Confirm</label>
+            <input type="password" id="dlg-reg-pw2" name="password_confirm" class="form-control"
+                   autocomplete="new-password" required />
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:.75rem;">
+          Create account
+        </button>
+      </form>
+      <p class="auth-switch">
+        Already registered?
+        <button type="button" class="auth-switch-btn" id="show-login-btn">Sign in</button>
+      </p>
+    </div>
+  </dialog>
+
   <!-- ── Flash messages ──────────────────────────────────── -->
   {% if messages %}
-    <div class="container messages-container" role="alert" aria-live="polite">
-      {% for message in messages %}
-        <div class="alert alert-{{ message.tags|default:'info' }}">
-          <span>{{ message }}</span>
-        </div>
-      {% endfor %}
+  <div class="container messages-container" role="alert" aria-live="polite">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }}">
+      <span>{{ message }}</span>
     </div>
+    {% endfor %}
+  </div>
   {% endif %}
 
   <!-- ── Main content ────────────────────────────────────── -->
-  <main id="main-content">
-    {% block content %}{% endblock %}
-  </main>
+  <main id="main-content">{% block content %}{% endblock %}</main>
 
   <!-- ── Footer ──────────────────────────────────────────── -->
   <footer class="site-footer" id="contact" role="contentinfo">
@@ -80,9 +227,7 @@
       <div class="footer-grid">
         <div>
           <div class="footer-brand">Rathna Stores</div>
-          <p class="footer-tagline">
-            Handcrafted cakes baked with love, delivering sweetness to every celebration in Sri Lanka.
-          </p>
+          <p class="footer-tagline">Handcrafted cakes baked with love, delivering sweetness to every celebration in Sri Lanka.</p>
         </div>
         <div>
           <h2 class="footer-heading">Shop</h2>
@@ -95,7 +240,6 @@
         <div>
           <h2 class="footer-heading">Contact Us</h2>
           <div class="footer-contact">
-            <!-- Placeholder business info — update with confirmed details -->
             <p>📍 Colombo, Sri Lanka</p>
             <p>📞 +94 77 123 4567</p>
             <p>✉️ hello@rathnastores.lk</p>
@@ -108,19 +252,115 @@
     </div>
   </footer>
 
-  <!-- ── Minimal JS for mobile nav (no-op if JS unavailable) ── -->
+  <!-- ── JS: mobile nav + auth dialog ───────────────────── -->
   <script>
-    (function () {
-      var toggle = document.querySelector('.nav-toggle');
-      var navLinks = document.getElementById('nav-links');
-      if (toggle && navLinks) {
-        toggle.addEventListener('click', function () {
-          var open = navLinks.classList.toggle('open');
-          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        });
-      }
-    })();
+  (function () {
+    'use strict';
+
+    /* ── Mobile nav ────────────────────────────────────── */
+    var toggle = document.querySelector('.nav-toggle');
+    var navLinks = document.getElementById('nav-links');
+    if (toggle && navLinks) {
+      toggle.addEventListener('click', function () {
+        var open = navLinks.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    }
+
+    /* ── Profile dropdown ──────────────────────────────── */
+    var profileBtn  = document.getElementById('nav-profile-btn');
+    var profileMenu = document.getElementById('nav-profile-menu');
+    if (profileBtn && profileMenu) {
+      profileBtn.addEventListener('click', function () {
+        var open = profileMenu.hidden;
+        profileMenu.hidden = !open;
+        profileBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      document.addEventListener('click', function (e) {
+        if (!profileBtn.contains(e.target) && !profileMenu.contains(e.target)) {
+          profileMenu.hidden = true;
+          profileBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          profileMenu.hidden = true;
+          profileBtn.setAttribute('aria-expanded', 'false');
+          profileBtn.focus();
+        }
+      });
+    }
+
+    /* ── Auth dialog ───────────────────────────────────── */
+    var dialog       = document.getElementById('auth-dialog');
+    var loginBtn     = document.getElementById('nav-login-btn');
+    var closeBtn     = document.getElementById('auth-dialog-close');
+    var loginPanel   = document.getElementById('dialog-login-panel');
+    var registerPanel= document.getElementById('dialog-register-panel');
+    var showRegBtn   = document.getElementById('show-register-btn');
+    var showLoginBtn = document.getElementById('show-login-btn');
+
+    if (!dialog || !dialog.showModal) return; // <dialog> not supported — fallback to full page
+
+    /* Populate the hidden `next` inputs from current URL */
+    function setNextInputs() {
+      var next = window.location.pathname + window.location.search;
+      dialog.querySelectorAll('.dialog-next-input').forEach(function (inp) {
+        inp.value = next;
+      });
+    }
+
+    var openerEl = null;
+
+    function openDialog(showRegister) {
+      setNextInputs();
+      loginPanel.hidden   = !!showRegister;
+      registerPanel.hidden = !showRegister;
+      dialog.showModal();
+      var firstInput = dialog.querySelector(showRegister ? '#dlg-first-name' : '#dlg-email');
+      if (firstInput) firstInput.focus();
+    }
+
+    function closeDialog() {
+      dialog.close();
+      if (openerEl) openerEl.focus();
+    }
+
+    if (loginBtn) {
+      loginBtn.addEventListener('click', function () {
+        openerEl = loginBtn;
+        openDialog(false);
+      });
+    }
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeDialog);
+    }
+    if (showRegBtn) {
+      showRegBtn.addEventListener('click', function () {
+        loginPanel.hidden   = true;
+        registerPanel.hidden = false;
+        document.getElementById('dlg-first-name').focus();
+      });
+    }
+    if (showLoginBtn) {
+      showLoginBtn.addEventListener('click', function () {
+        registerPanel.hidden = true;
+        loginPanel.hidden    = false;
+        document.getElementById('dlg-email').focus();
+      });
+    }
+
+    /* Close on backdrop click */
+    dialog.addEventListener('click', function (e) {
+      if (e.target === dialog) closeDialog();
+    });
+
+    /* Reduced motion: show backdrop but skip transition */
+    var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) dialog.classList.add('no-motion');
+  })();
   </script>
+
   {% block extra_js %}{% endblock %}
 </body>
 </html>

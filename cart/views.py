@@ -124,15 +124,13 @@ def pay_now_placeholder(request):
     """
     Placeholder for future payment integration.
 
-    - Guests are redirected to login with /cart/pay/ as the safe return destination.
-    - Authenticated customers see the placeholder page which makes clear that
-      no payment is taken, no order is created, no stock is decremented.
+    Guests are redirected to login. Authenticated customers see this page,
+    which makes clear that no payment is taken and no order is created.
 
-    This view does NOT call any payment service, create order/payment rows,
-    or decrement inventory.
+    This view does NOT call any payment service, create order or payment rows,
+    or touch stock quantities.
     """
     if not _is_customer_authenticated(request.session):
-        # Send guest to login, returning here after authentication
         return redirect("/account/login/?next=/cart/pay/")
 
     return render(request, "cart/pay_now_placeholder.html")
