@@ -293,7 +293,7 @@ def get_cart_unit_count(session) -> int:
         if customer_id:
             cart_resp = (
                 client.table(CARTS_TABLE)
-                .select("cart_id")
+                .select("cart_id, cart_items(quantity)")
                 .eq("customer_id", customer_id)
                 .limit(1)
                 .execute()
@@ -304,7 +304,7 @@ def get_cart_unit_count(session) -> int:
                 return 0
             cart_resp = (
                 client.table(CARTS_TABLE)
-                .select("cart_id")
+                .select("cart_id, cart_items(quantity)")
                 .eq("session_id", cart_id)
                 .limit(1)
                 .execute()
@@ -313,15 +313,18 @@ def get_cart_unit_count(session) -> int:
         rows = cart_resp.data or []
         if not rows:
             return 0
-        cart_row_id = rows[0]["cart_id"]
-
-        items_resp = (
-            client.table(CART_ITEMS_TABLE)
-            .select("quantity")
-            .eq("cart_id", cart_row_id)
-            .execute()
+        if "cart_items" not in rows[0]:
+            items_resp = (
+                client.table(CART_ITEMS_TABLE)
+                .select("quantity")
+                .eq("cart_id", rows[0]["cart_id"])
+                .execute()
+            )
+            return sum(int(item.get("quantity", 0)) for item in (items_resp.data or []))
+        return sum(
+            int(item.get("quantity", 0))
+            for item in (rows[0].get("cart_items") or [])
         )
-        return sum(int(i.get("quantity", 0)) for i in (items_resp.data or []))
     except Exception as exc:
         logger.debug("Cart count unavailable: %s", exc)
         return 0

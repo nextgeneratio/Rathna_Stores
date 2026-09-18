@@ -21,6 +21,7 @@ import uuid
 from datetime import date
 from typing import Optional
 
+from django.core.cache import cache
 from postgrest.exceptions import APIError
 
 from Rathna_Stores.supabase_client import get_supabase_client
@@ -510,6 +511,7 @@ def upload_profile_image(
         rows = resp.data or []
         if not rows:
             raise CustomerError("Profile image URL could not be saved.")
+        clear_customer_nav_cache(customer_id)
     except CustomerError:
         raise
     except APIError as exc:
@@ -544,6 +546,7 @@ def delete_profile_image(
         client.table(CUSTOMERS_TABLE).update(
             {"profile_image_url": None}
         ).eq("customer_id", customer_id).execute()
+        clear_customer_nav_cache(customer_id)
     except APIError as exc:
         logger.error("Profile image URL clear failed for %s: %s", customer_id, exc)
         raise CustomerError("Could not remove profile image. Please try again.") from exc
@@ -946,6 +949,10 @@ def get_customer_nav_context(session) -> dict:
     customer_id = get_authenticated_customer_id(session)
     if not customer_id:
         return {"customer": None, "customer_authenticated": False}
+    cache_key = f"rathna_customer_nav:{customer_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
     try:
         client = get_supabase_client()
         resp = (
@@ -957,7 +964,14 @@ def get_customer_nav_context(session) -> dict:
         )
         rows = resp.data or []
         if rows:
-            return {"customer": rows[0], "customer_authenticated": True}
+            result = {"customer": rows[0], "customer_authenticated": True}
+            cache.set(cache_key, result, 30)
+            return result
     except Exception as exc:
         logger.debug("get_customer_nav_context failed: %s", exc)
     return {"customer": None, "customer_authenticated": False}
+
+
+def clear_customer_nav_cache(customer_id: str) -> None:
+    """Invalidate cached navbar data after a customer profile change."""
+    cache.delete(f"rathna_customer_nav:{customer_id}")
