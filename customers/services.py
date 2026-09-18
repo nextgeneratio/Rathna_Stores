@@ -330,6 +330,37 @@ def login_customer(session, email: str, password: str) -> dict:
     return customer
 
 
+def login_customer_with_tokens(
+    session,
+    access_token: str,
+    refresh_token: str = "",
+) -> dict:
+    """Validate Supabase callback tokens and establish the Django session."""
+    if not access_token:
+        raise AuthError("The verification link is invalid or has expired.")
+
+    client = get_supabase_client()
+    try:
+        auth_resp = client.auth.get_user(access_token)
+    except Exception as exc:
+        logger.info("Supabase callback token validation failed: %s", exc)
+        raise AuthError("The verification link is invalid or has expired.") from exc
+
+    auth_user = getattr(auth_resp, "user", None)
+    if not auth_user or not getattr(auth_user, "id", None):
+        raise AuthError("The verification link is invalid or has expired.")
+
+    customer = _resolve_customer_from_auth(str(auth_user.id))
+    if not customer:
+        logger.error("No customers row found for verified auth_user %s", auth_user.id)
+        raise AuthError("Your account profile could not be found. Please contact support.")
+    if not customer.get("is_active", True):
+        raise AuthError("This account has been deactivated. Please contact support.")
+
+    _set_customer_session(session, customer["customer_id"], access_token, refresh_token)
+    return customer
+
+
 # ── Logout ────────────────────────────────────────────────────────────────────
 
 def logout_customer(session) -> None:

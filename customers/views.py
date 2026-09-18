@@ -12,9 +12,10 @@ Security rules:
 from __future__ import annotations
 
 import logging
+import json
 
 from django.contrib import messages
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
@@ -26,6 +27,7 @@ from .services import (
     is_customer_authenticated,
     register_customer,
     login_customer,
+    login_customer_with_tokens,
     logout_customer,
     get_customer_profile,
     update_customer_profile,
@@ -141,6 +143,26 @@ def customer_login(request):
         "email": "",
         "next": next_url,
     })
+
+
+@require_POST
+def auth_callback(request):
+    """Accept and validate Supabase's email-verification session tokens."""
+    try:
+        payload = json.loads(request.body or "{}")
+        customer = login_customer_with_tokens(
+            session=request.session,
+            access_token=payload.get("access_token", ""),
+            refresh_token=payload.get("refresh_token", ""),
+        )
+    except (json.JSONDecodeError, AttributeError, TypeError):
+        return JsonResponse({"error": "Invalid verification response."}, status=400)
+    except AuthError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+
+    _perform_cart_merge(request)
+    request.session.cycle_key()
+    return JsonResponse({"first_name": customer["first_name"]})
 
 
 # ── Logout ────────────────────────────────────────────────────────────────────

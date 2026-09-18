@@ -333,6 +333,21 @@ class LoginServiceTests(TestCase):
         with self.assertRaises(AuthError):
             login_customer({}, "amara@example.com", "password123")
 
+    @patch("customers.services.get_supabase_client")
+    def test_login_with_tokens_establishes_session(self, mock_get_client):
+        from customers.services import login_customer_with_tokens
+        mock_client = _mock_supabase({"customers": [_make_customer()]})
+        mock_client.auth.get_user.return_value = _make_auth_response(session=None)
+        mock_get_client.return_value = mock_client
+
+        session = {}
+        customer = login_customer_with_tokens(session, "callback_access", "callback_refresh")
+
+        self.assertEqual(customer["first_name"], "Amara")
+        self.assertEqual(session[ACCESS_TOKEN_SESSION_KEY], "callback_access")
+        self.assertEqual(session[REFRESH_TOKEN_SESSION_KEY], "callback_refresh")
+        mock_client.auth.get_user.assert_called_once_with("callback_access")
+
     def test_login_empty_password_raises(self):
         from customers.services import login_customer
         with self.assertRaises(AuthError):

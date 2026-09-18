@@ -8,6 +8,7 @@ urlpatterns = [
     # Authentication (dedicated routes — JS-enhanced into dialog)
     path("login/",    views.customer_login,    name="login"),
     path("register/", views.customer_register, name="register"),
+    path("auth-callback/", views.auth_callback, name="auth_callback"),
     path("logout/",   views.customer_logout,   name="logout"),
 
     # Profile
