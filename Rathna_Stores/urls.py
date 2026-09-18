@@ -13,6 +13,7 @@ urlpatterns = [
 
     # Customer account (register, login, logout, profile, addresses)
     path("account/", include("customers.urls", namespace="customers")),
+    path("chat/", include("chatbot.urls", namespace="chatbot")),
 
     # Staff product management interface
     path("manage/", include("admin.urls", namespace="store_admin")),

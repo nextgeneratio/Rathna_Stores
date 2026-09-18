@@ -253,10 +253,97 @@
     </div>
   </footer>
 
+  <aside class="shop-chat" id="shop-chat" aria-label="Rathna Stores assistant">
+    <button class="shop-chat-toggle" id="shop-chat-toggle" type="button"
+            aria-expanded="false" aria-controls="shop-chat-panel">
+      <span class="shop-chat-toggle-dot" aria-hidden="true"></span>
+      Ask Rathna
+    </button>
+    <section class="shop-chat-panel" id="shop-chat-panel" hidden>
+      <header class="shop-chat-header">
+        <div>
+          <strong>Rathna assistant</strong>
+          <span>Here to help you choose a cake</span>
+        </div>
+        <button class="shop-chat-close" id="shop-chat-close" type="button" aria-label="Close assistant">&times;</button>
+      </header>
+      <div class="shop-chat-messages" id="shop-chat-messages" aria-live="polite">
+        <p class="shop-chat-message shop-chat-message--assistant">Hi{% if customer_authenticated and nav_customer %} {{ nav_customer.first_name }}{% endif %}. What kind of cake are you looking for?</p>
+      </div>
+      <form class="shop-chat-form" id="shop-chat-form">
+        {% csrf_token %}
+        <label class="visually-hidden" for="shop-chat-input">Message Rathna assistant</label>
+        <input id="shop-chat-input" name="message" maxlength="1200" autocomplete="off"
+               placeholder="Ask about cakes or prices..." required />
+        <button type="submit" aria-label="Send message">Send</button>
+      </form>
+    </section>
+  </aside>
+
   <!-- ── JS: mobile nav + auth dialog ───────────────────── -->
   <script>
   (function () {
     'use strict';
+
+    /* ── Rathna assistant ─────────────────────────────── */
+    var chatToggle = document.getElementById('shop-chat-toggle');
+    var chatPanel = document.getElementById('shop-chat-panel');
+    var chatClose = document.getElementById('shop-chat-close');
+    var chatForm = document.getElementById('shop-chat-form');
+    var chatInput = document.getElementById('shop-chat-input');
+    var chatMessages = document.getElementById('shop-chat-messages');
+    var chatHistory = [];
+
+    function setChatOpen(open) {
+      chatPanel.hidden = !open;
+      chatToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) chatInput.focus();
+    }
+
+    function addChatMessage(text, role) {
+      var message = document.createElement('p');
+      message.className = 'shop-chat-message shop-chat-message--' + role;
+      message.textContent = text;
+      chatMessages.appendChild(message);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    if (chatToggle && chatPanel && chatForm) {
+      chatToggle.addEventListener('click', function () {
+        setChatOpen(chatPanel.hidden);
+      });
+      chatClose.addEventListener('click', function () { setChatOpen(false); });
+      chatForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var text = chatInput.value.trim();
+        if (!text) return;
+        chatHistory.push({ role: 'user', content: text });
+        addChatMessage(text, 'user');
+        chatInput.value = '';
+        chatInput.disabled = true;
+        fetch("{% url 'chatbot:chat' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+          },
+          body: JSON.stringify({ messages: chatHistory })
+        }).then(function (response) {
+          return response.json().then(function (data) {
+            if (!response.ok) throw new Error(data.error || 'The assistant is unavailable.');
+            return data;
+          });
+        }).then(function (data) {
+          chatHistory.push({ role: 'assistant', content: data.message });
+          addChatMessage(data.message, 'assistant');
+        }).catch(function (error) {
+          addChatMessage(error.message, 'assistant');
+        }).finally(function () {
+          chatInput.disabled = false;
+          chatInput.focus();
+        });
+      });
+    }
 
     /* ── Supabase email verification callback ─────────── */
     var hash = new URLSearchParams(window.location.hash.slice(1));

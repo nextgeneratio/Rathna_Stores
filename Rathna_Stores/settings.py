@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'cakes.apps.CakesConfig',
     'customers.apps.CustomersConfig',
     'cart.apps.CartConfig',
+    'chatbot.apps.ChatbotConfig',
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -98,6 +99,8 @@ DATABASES = {
 
 SUPABASE_URL = os.getenv('SUPABASE_URL', '')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '')
+OPENROUTER_MODEL = os.getenv('OPENROUTER_MODEL', 'cohere/north-mini-code:free')
 
 
 # Password validation

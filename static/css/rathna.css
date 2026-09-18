@@ -1689,3 +1689,36 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 @media (prefers-reduced-motion: reduce) {
   .auth-dialog[open] { animation: none; }
 }
+
+/* ── Shop assistant ───────────────────────────────────────── */
+.shop-chat { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 20; }
+.shop-chat-toggle {
+  border: 0; border-radius: 999px; background: var(--cocoa); color: #fff;
+  padding: .8rem 1rem; box-shadow: 0 8px 24px rgba(46, 29, 20, .22);
+  cursor: pointer; font: inherit; font-weight: 700;
+}
+.shop-chat-toggle-dot { display: inline-block; width: .5rem; height: .5rem; margin-right: .4rem;
+  border-radius: 50%; background: #77c58c; vertical-align: middle; }
+.shop-chat-panel { width: min(360px, calc(100vw - 2rem)); margin-bottom: .75rem; overflow: hidden;
+  border: 1px solid var(--beige-border); border-radius: 12px; background: var(--surface, #fff);
+  box-shadow: 0 16px 40px rgba(46, 29, 20, .2); }
+.shop-chat-header { display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 1rem; background: var(--cocoa); color: #fff; }
+.shop-chat-header strong, .shop-chat-header span { display: block; }
+.shop-chat-header span { margin-top: .2rem; color: rgba(255,255,255,.72); font-size: .78rem; }
+.shop-chat-close { border: 0; background: transparent; color: #fff; font-size: 1.4rem; cursor: pointer; }
+.shop-chat-messages { display: flex; flex-direction: column; gap: .65rem; height: 260px; padding: 1rem;
+  overflow-y: auto; background: #fbf8f3; }
+.shop-chat-message { max-width: 86%; margin: 0; padding: .65rem .75rem; border-radius: 10px;
+  color: var(--cocoa); font-size: .88rem; line-height: 1.45; white-space: pre-wrap; }
+.shop-chat-message--assistant { align-self: flex-start; background: #fff; border: 1px solid var(--beige-border); }
+.shop-chat-message--user { align-self: flex-end; background: var(--cocoa); color: #fff; }
+.shop-chat-form { display: flex; gap: .5rem; padding: .75rem; border-top: 1px solid var(--beige-border); }
+.shop-chat-form input { min-width: 0; flex: 1; border: 1px solid var(--beige-border); border-radius: 6px;
+  padding: .65rem .7rem; font: inherit; }
+.shop-chat-form button { border: 0; border-radius: 6px; padding: .65rem .75rem; background: var(--rust, #8a482f);
+  color: #fff; cursor: pointer; font: inherit; font-weight: 700; }
+@media (max-width: 600px) {
+  .shop-chat { right: .75rem; bottom: .75rem; }
+  .shop-chat-panel { width: calc(100vw - 1.5rem); }
+}
