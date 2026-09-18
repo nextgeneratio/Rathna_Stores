@@ -17,5 +17,10 @@ def get_supabase_client(access_token: str = "", refresh_token: str = "") -> Clie
     
     client = create_client(supabase_url, supabase_key)
     if access_token:
-        client.auth.set_session(access_token, refresh_token)
+        auth_response = client.auth.set_session(access_token, refresh_token)
+        session = getattr(auth_response, "session", None)
+        bearer_token = getattr(session, "access_token", None) or access_token
+        # set_session validates the token but supabase-py does not update the
+        # shared REST/Storage headers in every client version.
+        client.options.headers["Authorization"] = f"Bearer {bearer_token}"
     return client

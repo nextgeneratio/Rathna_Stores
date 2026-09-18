@@ -489,7 +489,7 @@ def upload_profile_image(
             {"content-type": content_type, "upsert": "true"},
         )
     except Exception as exc:
-        logger.error("Profile image upload failed for %s: %s", customer_id, exc)
+        logger.error("Profile image storage upload failed for %s: %s", customer_id, exc)
         raise CustomerError("Image upload failed. Please try again.") from exc
 
     # Get public/accessible URL
@@ -515,7 +515,7 @@ def upload_profile_image(
     except APIError as exc:
         # Upload succeeded but DB write failed — attempt to clean up storage
         logger.error("Profile image DB write failed for %s: %s", customer_id, exc)
-        _delete_profile_storage_object(storage_path)
+        _delete_profile_storage_object(storage_path, access_token, refresh_token)
         raise CustomerError("Image was uploaded but could not be saved. Please try again.") from exc
 
     return image_url
