@@ -23,6 +23,8 @@ from .services import (
     AuthError,
     CustomerError,
     CUSTOMER_ID_SESSION_KEY,
+    ACCESS_TOKEN_SESSION_KEY,
+    REFRESH_TOKEN_SESSION_KEY,
     get_authenticated_customer_id,
     is_customer_authenticated,
     register_customer,
@@ -278,7 +280,13 @@ def profile_image_upload(request):
 
     try:
         file_bytes = uploaded.read()
-        upload_profile_image(customer_id, file_bytes, uploaded.content_type or "")
+        upload_profile_image(
+            customer_id,
+            file_bytes,
+            uploaded.content_type or "",
+            request.session.get(ACCESS_TOKEN_SESSION_KEY, ""),
+            request.session.get(REFRESH_TOKEN_SESSION_KEY, ""),
+        )
         messages.success(request, "Profile photo updated.")
     except CustomerError as exc:
         messages.error(request, str(exc))
@@ -292,7 +300,11 @@ def profile_image_delete(request):
     """Remove the profile image."""
     customer_id = get_authenticated_customer_id(request.session)
     try:
-        delete_profile_image(customer_id)
+        delete_profile_image(
+            customer_id,
+            request.session.get(ACCESS_TOKEN_SESSION_KEY, ""),
+            request.session.get(REFRESH_TOKEN_SESSION_KEY, ""),
+        )
         messages.success(request, "Profile photo removed.")
     except CustomerError as exc:
         messages.error(request, str(exc))

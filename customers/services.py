@@ -454,7 +454,13 @@ def _safe_mime_from_bytes(data: bytes) -> Optional[str]:
     return None
 
 
-def upload_profile_image(customer_id: str, file_bytes: bytes, declared_content_type: str) -> str:
+def upload_profile_image(
+    customer_id: str,
+    file_bytes: bytes,
+    declared_content_type: str,
+    access_token: str = "",
+    refresh_token: str = "",
+) -> str:
     """
     Upload a profile image to the User_Profile bucket, update customers row.
     Returns the new profile_image_url.
@@ -473,7 +479,7 @@ def upload_profile_image(customer_id: str, file_bytes: bytes, declared_content_t
     ext = ext_map[content_type]
     storage_path = f"customers/{customer_id}/profile.{ext}"
 
-    client = get_supabase_client()
+    client = get_supabase_client(access_token, refresh_token)
 
     # Attempt upload (upsert=True to replace any existing file)
     try:
@@ -515,7 +521,11 @@ def upload_profile_image(customer_id: str, file_bytes: bytes, declared_content_t
     return image_url
 
 
-def delete_profile_image(customer_id: str) -> None:
+def delete_profile_image(
+    customer_id: str,
+    access_token: str = "",
+    refresh_token: str = "",
+) -> None:
     """
     Remove the profile image from storage and clear profile_image_url.
     Best-effort storage cleanup — always clears the DB field.
@@ -530,7 +540,7 @@ def delete_profile_image(customer_id: str) -> None:
 
     # Clear the DB field first
     try:
-        client = get_supabase_client()
+        client = get_supabase_client(access_token, refresh_token)
         client.table(CUSTOMERS_TABLE).update(
             {"profile_image_url": None}
         ).eq("customer_id", customer_id).execute()
@@ -543,13 +553,17 @@ def delete_profile_image(customer_id: str) -> None:
         marker = f"/{PROFILE_BUCKET}/"
         if marker in image_url:
             storage_path = image_url.split(marker, 1)[-1].split("?")[0]
-            _delete_profile_storage_object(storage_path)
+            _delete_profile_storage_object(storage_path, access_token, refresh_token)
 
 
-def _delete_profile_storage_object(storage_path: str) -> None:
+def _delete_profile_storage_object(
+    storage_path: str,
+    access_token: str = "",
+    refresh_token: str = "",
+) -> None:
     """Delete a User_Profile bucket object. Logs a warning on failure."""
     try:
-        client = get_supabase_client()
+        client = get_supabase_client(access_token, refresh_token)
         client.storage.from_(PROFILE_BUCKET).remove([storage_path])
     except Exception as exc:
         logger.warning("Profile storage cleanup failed for %s: %s", storage_path, exc)
