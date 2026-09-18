@@ -303,8 +303,33 @@
     function addChatMessage(text, role) {
       var message = document.createElement('p');
       message.className = 'shop-chat-message shop-chat-message--' + role;
-      message.textContent = text;
+      message.textContent = text.replace(/\*\*|__/g, '');
       chatMessages.appendChild(message);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function addChatProducts(products) {
+      if (!products || !products.length) return;
+      var grid = document.createElement('div');
+      grid.className = 'shop-chat-products';
+      products.forEach(function (product) {
+        var card = document.createElement('a');
+        card.className = 'shop-chat-product';
+        card.href = product.detail_url;
+        var image = document.createElement('img');
+        image.src = product.image_url || "{% static 'images/cakes/default-cake.jpg' %}";
+        image.alt = product.name;
+        image.loading = 'lazy';
+        var details = document.createElement('span');
+        details.className = 'shop-chat-product-details';
+        details.innerHTML = '<strong></strong><small></small>';
+        details.querySelector('strong').textContent = product.name;
+        details.querySelector('small').textContent = product.price + (product.in_stock ? ' · In stock' : ' · Out of stock');
+        card.appendChild(image);
+        card.appendChild(details);
+        grid.appendChild(card);
+      });
+      chatMessages.appendChild(grid);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
@@ -336,6 +361,7 @@
         }).then(function (data) {
           chatHistory.push({ role: 'assistant', content: data.message });
           addChatMessage(data.message, 'assistant');
+          addChatProducts(data.products);
         }).catch(function (error) {
           addChatMessage(error.message, 'assistant');
         }).finally(function () {

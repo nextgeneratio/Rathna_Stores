@@ -9,7 +9,7 @@ from .services import ChatbotError, ask_assistant
 class ChatbotEndpointTests(TestCase):
     @patch("chatbot.views.ask_assistant")
     def test_guest_can_chat(self, mock_assistant):
-        mock_assistant.return_value = "Try our chocolate cake."
+        mock_assistant.return_value = {"message": "Try our chocolate cake.", "products": []}
         response = self.client.post(
             "/chat/",
             data=json.dumps({"messages": [{"role": "user", "content": "What cake do you recommend?"}]}),
@@ -45,7 +45,7 @@ class ChatbotServiceTests(TestCase):
 
         result = ask_assistant([{"role": "user", "content": "What is available?"}], "Amara")
 
-        self.assertEqual(result, "Chocolate Cake is available.")
+        self.assertEqual(result["message"], "Chocolate Cake is available.")
         request_payload = mock_post.call_args.kwargs["json"]
         self.assertIn("Chocolate Cake", request_payload["messages"][0]["content"])
         self.assertIn("Amara", request_payload["messages"][0]["content"])

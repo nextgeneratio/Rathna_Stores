@@ -22,8 +22,7 @@ class ChatbotError(Exception):
     """A user-safe chatbot failure."""
 
 
-def _catalogue_context() -> str:
-    products = get_catalogue_products()
+def _catalogue_context(products: list[dict]) -> str:
     if not products:
         return "The catalogue is temporarily unavailable. Do not invent products or prices."
 
@@ -36,7 +35,11 @@ def _catalogue_context() -> str:
     return "Current Rathna Stores catalogue:\n" + "\n".join(lines)
 
 
-def _build_messages(history: list[dict[str, str]], customer_name: str = "") -> list[dict[str, str]]:
+def _build_messages(
+    history: list[dict[str, str]],
+    customer_name: str = "",
+    products: list[dict] | None = None,
+) -> list[dict[str, str]]:
     name_context = f"The signed-in customer's first name is {customer_name}." if customer_name else "The shopper is browsing as a guest."
     system = (
         "You are the friendly shopping assistant for Rathna Stores, a handcrafted cake shop in Sri Lanka. "
@@ -44,7 +47,7 @@ def _build_messages(history: list[dict[str, str]], customer_name: str = "") -> l
         "Be concise, warm, and practical. Use LKR prices from the catalogue context. "
         "Never claim an order was placed, payment was completed, or stock is available unless the context says so. "
         "For custom orders, explain that the feature is coming soon and suggest contacting the shop. "
-        f"{name_context}\n\n{_catalogue_context()}"
+        f"{name_context}\n\n{_catalogue_context(products or [])}"
     )
     messages = [{"role": "system", "content": system}]
     for item in history[-MAX_HISTORY_MESSAGES:]:
@@ -55,13 +58,14 @@ def _build_messages(history: list[dict[str, str]], customer_name: str = "") -> l
     return messages
 
 
-def ask_assistant(history: list[dict[str, str]], customer_name: str = "") -> str:
+def ask_assistant(history: list[dict[str, str]], customer_name: str = "") -> dict:
     api_key = getattr(settings, "OPENROUTER_API_KEY", "") or os.getenv("OPENROUTER_API_KEY", "")
     api_key = api_key.strip()
     if not api_key:
         raise ChatbotError("The shop assistant is not configured yet.")
 
-    messages = _build_messages(history, customer_name)
+    products = get_catalogue_products()
+    messages = _build_messages(history, customer_name, products)
     payload = {
         "model": getattr(settings, "OPENROUTER_MODEL", "") or os.getenv("OPENROUTER_MODEL", DEFAULT_MODEL),
         "messages": messages,
@@ -86,4 +90,9 @@ def ask_assistant(history: list[dict[str, str]], customer_name: str = "") -> str
 
     if not answer:
         raise ChatbotError("The shop assistant did not return an answer.")
-    return answer
+    answer_lower = answer.lower()
+    mentioned_products = [
+        product for product in products
+        if product.get("name", "").lower() in answer_lower
+    ][:8]
+    return {"message": answer, "products": mentioned_products}
