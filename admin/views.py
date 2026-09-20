@@ -40,6 +40,7 @@ from cakes.services import (
     list_bucket_objects,
     get_public_url,
 )
+from .image_processing import ImageProcessingError, process_product_image
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ SERVING_UNIT_CHOICES = ["person", "persons", "slice", "slices"]
 def staff_required(view_func):
     """Decorator: requires login + is_staff. Returns 403 for non-staff users."""
     @wraps(view_func)
-    @login_required(login_url="accounts/login/")
+    @login_required(login_url="/accounts/login/")
     def _wrapped(request, *args, **kwargs):
         if not request.user.is_staff:
             return HttpResponseForbidden(
@@ -447,7 +448,12 @@ def image_upload(request, product_id):
     storage_path_result = None
     try:
         file_bytes = uploaded_file.read()
+        file_bytes, content_type = process_product_image(file_bytes)
+        storage_path = f"{storage_path.rsplit('.', 1)[0]}.webp"
         storage_path_result = upload_image_to_storage(storage_path, file_bytes, content_type)
+    except ImageProcessingError as exc:
+        messages.error(request, str(exc))
+        return redirect("store_admin:product_images", product_id=product_id)
     except RuntimeError as exc:
         messages.error(request, str(exc))
         return redirect("store_admin:product_images", product_id=product_id)

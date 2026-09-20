@@ -101,6 +101,7 @@ class ImageUploadTests(TestCase):
             "categories": {"slug": "chocolate"},
         }
 
+    @patch("admin.views.process_product_image", return_value=(b"processed", "image/webp"))
     @patch("admin.views.set_primary_image")
     @patch("admin.views.add_product_image")
     @patch("admin.views.get_public_url", return_value="https://example.test/new.jpg")
@@ -115,6 +116,7 @@ class ImageUploadTests(TestCase):
         mock_public_url,
         mock_add,
         mock_set_primary,
+        mock_process,
     ):
         mock_get_product.return_value = self.product
         mock_get_images.return_value = [
