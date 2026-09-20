@@ -601,6 +601,9 @@ class ProfileImageTests(TestCase):
 
         url = upload_profile_image("cccc0000-0000-0000-0000-000000000001", jpeg_bytes, "image/jpeg")
         self.assertIn("cdn.example.com", url)
+        upload_call = mock_client.storage.from_.return_value.upload.call_args
+        self.assertEqual(upload_call.args[0], "customers/cccc0000-0000-0000-0000-000000000001/profile.jpg")
+        self.assertTrue(upload_call.args[2]["upsert"])
 
     @patch("customers.services.get_supabase_client")
     def test_upload_cleans_up_storage_on_db_failure(self, mock_get_client):

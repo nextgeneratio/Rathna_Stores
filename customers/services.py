@@ -487,7 +487,7 @@ def upload_profile_image(
         client.storage.from_(PROFILE_BUCKET).upload(
             storage_path,
             file_bytes,
-            {"content-type": content_type, "upsert": "true"},
+            {"content-type": content_type, "upsert": True},
         )
     except Exception as exc:
         logger.error("Profile image storage upload failed for %s: %s", customer_id, exc)
