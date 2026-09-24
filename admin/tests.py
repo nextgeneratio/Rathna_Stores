@@ -107,6 +107,24 @@ class StaffViewErrorHandlingTests(TestCase):
         response = self.client.get(reverse("store_admin:analytics"))
         self.assertEqual(response.status_code, 302)
 
+    @patch("admin.views.delete_product")
+    @patch("admin.views.get_product_by_id")
+    def test_product_delete_is_post_only_and_redirects(self, mock_get, mock_delete):
+        product_id = "bbbbbbbb-0000-0000-0000-000000000001"
+        mock_get.return_value = {"product_id": product_id, "name": "Choco Fudge"}
+        response = self.client.post(reverse("store_admin:product_delete", args=[product_id]))
+        self.assertEqual(response.status_code, 302)
+        mock_delete.assert_called_once_with(product_id)
+
+    @patch("admin.views.delete_category")
+    @patch("admin.views.get_category_by_id")
+    def test_category_delete_is_post_only_and_redirects(self, mock_get, mock_delete):
+        category_id = "aaaaaaaa-0000-0000-0000-000000000001"
+        mock_get.return_value = {"category_id": category_id, "name": "Chocolate"}
+        response = self.client.post(reverse("store_admin:category_delete", args=[category_id]))
+        self.assertEqual(response.status_code, 302)
+        mock_delete.assert_called_once_with(category_id)
+
 
 class ImageUploadTests(TestCase):
 

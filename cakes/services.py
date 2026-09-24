@@ -223,6 +223,12 @@ def update_category(category_id: str, data: dict) -> dict:
     return rows[0]
 
 
+def delete_category(category_id: str) -> None:
+    """Delete a category; database constraints protect products using it."""
+    client = get_supabase_client()
+    client.table(CATEGORIES_TABLE).delete().eq("category_id", category_id).execute()
+
+
 # ---------------------------------------------------------------------------
 # Product queries
 # ---------------------------------------------------------------------------
@@ -402,6 +408,17 @@ def update_product(product_id: str, data: dict) -> dict:
     if not rows:
         raise RuntimeError("Product update returned no data.")
     return enrich_product(rows[0])
+
+
+def delete_product(product_id: str) -> None:
+    """Delete a product and best-effort clean up its linked storage objects."""
+    images = _fetch_images_for_product(product_id)
+    client = get_supabase_client()
+    client.table(PRODUCTS_TABLE).delete().eq("product_id", product_id).execute()
+    for image in images:
+        storage_path = image.get("storage_path")
+        if storage_path:
+            delete_storage_object(storage_path)
 
 
 # ---------------------------------------------------------------------------

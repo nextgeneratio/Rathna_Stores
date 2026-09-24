@@ -80,6 +80,10 @@
                 {% if product.is_active %}Disable{% else %}Enable{% endif %}
               </button>
             </form>
+            <form method="post" action="{% url 'store_admin:product_delete' product_id=product.product_id %}" style="display:inline;" onsubmit="return confirm('Delete {{ product.name|escapejs }}? This cannot be undone.');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger" aria-label="Delete {{ product.name }}">Delete</button>
+            </form>
           </div>
         </td>
       </tr>

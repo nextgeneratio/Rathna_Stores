@@ -49,6 +49,10 @@
                 {% if cat.is_active %}Disable{% else %}Enable{% endif %}
               </button>
             </form>
+            <form method="post" action="{% url 'store_admin:category_delete' category_id=cat.category_id %}" style="display:inline;" onsubmit="return confirm('Delete {{ cat.name|escapejs }}? This cannot be undone.');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger" aria-label="Delete {{ cat.name }}">Delete</button>
+            </form>
           </div>
         </td>
       </tr>

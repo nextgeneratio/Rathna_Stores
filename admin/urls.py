@@ -14,6 +14,7 @@ urlpatterns = [
     path("products/add/", views.product_create, name="product_create"),
     path("products/<uuid:product_id>/edit/", views.product_edit, name="product_edit"),
     path("products/<uuid:product_id>/toggle/", views.product_toggle_active, name="product_toggle"),
+    path("products/<uuid:product_id>/delete/", views.product_delete, name="product_delete"),
 
     # Image management (within a product)
     path("products/<uuid:product_id>/images/", views.product_images, name="product_images"),
@@ -28,4 +29,5 @@ urlpatterns = [
     path("categories/add/", views.category_create, name="category_create"),
     path("categories/<uuid:category_id>/edit/", views.category_edit, name="category_edit"),
     path("categories/<uuid:category_id>/toggle/", views.category_toggle_active, name="category_toggle"),
+    path("categories/<uuid:category_id>/delete/", views.category_delete, name="category_delete"),
 ]

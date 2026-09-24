@@ -26,11 +26,13 @@ from cakes.services import (
     get_category_by_id,
     create_category,
     update_category,
+    delete_category,
     # Products
     get_all_products_staff,
     get_product_by_id,
     create_product,
     update_product,
+    delete_product,
     # Images
     get_images_for_product,
     add_product_image,
@@ -451,6 +453,25 @@ def product_toggle_active(request, product_id):
     return redirect("store_admin:product_list")
 
 
+@staff_required
+def product_delete(request, product_id):
+    """Delete a product through an explicit, CSRF-protected POST."""
+    if request.method != "POST":
+        return redirect("store_admin:product_list")
+
+    product = get_product_by_id(str(product_id), active_only=False)
+    if not product:
+        raise Http404("Product not found.")
+
+    try:
+        delete_product(str(product_id))
+        messages.success(request, f"Product '{product['name']}' deleted.")
+    except Exception as exc:
+        logger.error("Product delete failed: %s", exc)
+        messages.error(request, "Could not delete this product. It may be referenced by existing orders or reviews.")
+    return redirect("store_admin:product_list")
+
+
 # ---------------------------------------------------------------------------
 # Image management
 # ---------------------------------------------------------------------------
@@ -821,4 +842,23 @@ def category_toggle_active(request, category_id):
         logger.error("Category toggle failed: %s", exc)
         messages.error(request, "Could not update category state.")
 
+    return redirect("store_admin:category_list")
+
+
+@staff_required
+def category_delete(request, category_id):
+    """Delete a category through an explicit, CSRF-protected POST."""
+    if request.method != "POST":
+        return redirect("store_admin:category_list")
+
+    category = get_category_by_id(str(category_id))
+    if not category:
+        raise Http404("Category not found.")
+
+    try:
+        delete_category(str(category_id))
+        messages.success(request, f"Category '{category['name']}' deleted.")
+    except Exception as exc:
+        logger.error("Category delete failed: %s", exc)
+        messages.error(request, "Could not delete this category. It may still contain products.")
     return redirect("store_admin:category_list")
