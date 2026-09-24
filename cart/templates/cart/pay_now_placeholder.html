@@ -21,16 +21,30 @@
       Stripe alone does not mark an order paid.
     </div>
 
+    <form method="post" action="{% url 'cart:pay_now' %}" style="text-align:left;margin:0 auto 1.5rem;max-width:480px;">
+      {% csrf_token %}
+      <fieldset style="border:0;padding:0;margin:0 0 1.25rem;">
+        <legend style="font-weight:700;margin-bottom:.75rem;">How would you like to receive your order?</legend>
+        <label style="display:block;margin:.6rem 0;"><input type="radio" name="delivery_type" value="PICKUP" required> Pick up from Rathna Stores</label>
+        <label style="display:block;margin:.6rem 0;"><input type="radio" name="delivery_type" value="DELIVERY"> Delivery within Colombo district</label>
+      </fieldset>
+      <label for="checkout-address" style="display:block;font-weight:700;margin-bottom:.5rem;">Delivery address</label>
+      <select id="checkout-address" name="address_id" style="width:100%;padding:.75rem;border:var(--border);border-radius:6px;margin-bottom:.5rem;">
+        <option value="">Choose a saved Colombo address for delivery</option>
+        {% for address in addresses %}
+        <option value="{{ address.address_id }}">{{ address.recipient_name }} — {{ address.address_line_1 }}, {{ address.city }}, {{ address.district|default:"District not set" }}</option>
+        {% endfor %}
+      </select>
+      <p class="form-hint" style="margin-bottom:1rem;">Delivery is available only when the selected saved address has district Colombo. Pickup does not require an address.</p>
+      {% if stripe_test_configured %}
+      <button type="submit" class="btn btn-secondary" style="width:100%;">Continue to Stripe test checkout</button>
+      {% else %}
+      <span class="btn btn-secondary" aria-disabled="true" style="display:block;text-align:center;">Stripe test mode is not configured</span>
+      {% endif %}
+    </form>
     <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
       <a href="{% url 'cart:cart' %}" class="btn btn-primary">← Back to cart</a>
-      {% if stripe_test_configured %}
-      <form method="post" action="{% url 'cart:pay_now' %}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-secondary">Continue to Stripe test checkout</button>
-      </form>
-      {% else %}
-      <span class="btn btn-secondary" aria-disabled="true">Stripe test mode is not configured</span>
-      {% endif %}
+      <a href="{% url 'customers:address_list' %}" class="btn btn-ghost">Manage saved addresses</a>
     </div>
   </div>
 </section>

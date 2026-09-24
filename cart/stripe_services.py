@@ -54,25 +54,44 @@ def _cart_for_checkout(session) -> tuple[dict, str]:
     return {**cart, "items": items}, str(customer_id)
 
 
-def _create_pending_order(session) -> tuple[dict, dict, dict]:
+def _create_pending_order(session, delivery_type: str = "PICKUP", address: dict | None = None) -> tuple[dict, dict, dict]:
     cart, customer_id = _cart_for_checkout(session)
     client = get_supabase_client()
     order_id = str(uuid.uuid4())
-    total = _money(cart.get("subtotal") or "0")
+    if delivery_type not in {"PICKUP", "DELIVERY"}:
+        raise CheckoutError("Choose pickup or delivery before continuing.")
+    if delivery_type == "DELIVERY" and not address:
+        raise CheckoutError("Choose a Colombo delivery address before continuing.")
+    if delivery_type == "DELIVERY" and str(address.get("district", "")).strip().lower() != "colombo":
+        raise CheckoutError("Delivery is currently available only for saved addresses in Colombo district.")
+    delivery_fee = _money(getattr(settings, "DELIVERY_FEE_LKR", Decimal("0.00"))) if delivery_type == "DELIVERY" else Decimal("0.00")
+    subtotal = _money(cart.get("subtotal") or "0")
+    total = _money(subtotal + delivery_fee)
     order = {
         "order_id": order_id,
         "customer_id": customer_id,
         "order_number": _new_order_number(),
         "delivery_type": "PICKUP",
-        "subtotal": str(total),
+        "subtotal": str(subtotal),
         "discount_amount": "0.00",
-        "delivery_fee": "0.00",
+        "delivery_fee": str(delivery_fee),
         "total_amount": str(total),
         "order_status": "PENDING",
         "payment_status": "PENDING",
         "payment_method": "stripe_test",
         "order_date": timezone.now().isoformat(),
     }
+    order["delivery_type"] = delivery_type
+    if delivery_type == "DELIVERY":
+        order.update({
+            "delivery_recipient_name": address.get("recipient_name"),
+            "delivery_phone_number": address.get("phone_number"),
+            "delivery_address_line_1": address.get("address_line_1"),
+            "delivery_address_line_2": address.get("address_line_2"),
+            "delivery_city": address.get("city"),
+            "delivery_district": address.get("district"),
+            "delivery_postal_code": address.get("postal_code"),
+        })
     created = client.table(ORDERS_TABLE).insert(order).execute().data or []
     if not created:
         raise CheckoutError("Could not start the checkout. Please try again.")
@@ -101,14 +120,23 @@ def _create_pending_order(session) -> tuple[dict, dict, dict]:
             },
             "quantity": quantity,
         })
+    if delivery_fee:
+        line_items.append({
+            "price_data": {
+                "currency": "lkr",
+                "product_data": {"name": "Delivery fee"},
+                "unit_amount": int(delivery_fee * 100),
+            },
+            "quantity": 1,
+        })
     client.table(ORDER_ITEMS_TABLE).insert(order_items).execute()
     return created[0], {"line_items": line_items, "total": total}, cart
 
 
-def create_checkout_session(session, origin: str) -> str:
+def create_checkout_session(session, origin: str, delivery_type: str = "PICKUP", address: dict | None = None) -> str:
     """Create a Stripe-hosted test Checkout Session from a fresh server cart read."""
     _configure_stripe()
-    order, checkout, _cart = _create_pending_order(session)
+    order, checkout, _cart = _create_pending_order(session, delivery_type, address)
     order_id = str(order["order_id"])
     idempotency_key = f"checkout:{order_id}"
     client = get_supabase_client()

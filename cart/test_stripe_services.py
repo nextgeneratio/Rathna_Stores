@@ -54,6 +54,32 @@ class StripeCheckoutServiceTests(SimpleTestCase):
         self.assertEqual(line_item["price_data"]["unit_amount"], 125000)
         self.assertEqual(mock_create.call_args.kwargs["metadata"], {"order_id": "order-1"})
 
+    @override_settings(STRIPE_TEST_MODE=True, STRIPE_SECRET_KEY="sk_test_example", DELIVERY_FEE_LKR="500.00")
+    @patch("cart.stripe_services.stripe.checkout.Session.create", return_value={"id": "cs_test_2", "url": "https://checkout.test/session"})
+    @patch("cart.stripe_services.get_supabase_client")
+    @patch("cart.stripe_services.get_cart")
+    def test_delivery_requires_colombo_and_snapshots_address(self, mock_cart, mock_client, mock_create):
+        mock_cart.return_value = {
+            "items": [{"product_id": "product-1", "quantity": 1, "effective_qty": 1, "unit_price": "1250.00", "product": {"name": "Chocolate Cake"}, "is_available": True}],
+            "subtotal": "1250.00", "has_purchasable_items": True,
+        }
+        client = MagicMock()
+        client.table.return_value.insert.return_value.execute.return_value.data = [{"order_id": "order-2", "order_number": "RS-TEST-2"}]
+        mock_client.return_value = client
+        from customers.services import CUSTOMER_ID_SESSION_KEY
+
+        address = {"recipient_name": "Test Customer", "phone_number": "0770000000", "address_line_1": "1 Main Road", "city": "Colombo", "district": "Colombo", "postal_code": "00100"}
+        create_checkout_session({CUSTOMER_ID_SESSION_KEY: "customer-1"}, "http://testserver", "DELIVERY", address)
+
+        order_payload = client.table.return_value.insert.call_args_list[0].args[0]
+        self.assertEqual(order_payload["delivery_type"], "DELIVERY")
+        self.assertEqual(order_payload["delivery_district"], "Colombo")
+        self.assertEqual(order_payload["delivery_fee"], "500.00")
+        self.assertEqual(order_payload["total_amount"], "1750.00")
+
+        with self.assertRaises(CheckoutError):
+            create_checkout_session({CUSTOMER_ID_SESSION_KEY: "customer-1"}, "http://testserver", "DELIVERY", {**address, "district": "Kandy"})
+
 
 class StripeWebhookServiceTests(SimpleTestCase):
     @override_settings(STRIPE_WEBHOOK_SECRET="whsec_test")

@@ -22,6 +22,7 @@ from .services import (
     remove_from_cart,
 )
 from .stripe_services import CheckoutError, create_checkout_session, handle_webhook
+from customers.services import get_address_by_id, get_customer_addresses, get_authenticated_customer_id
 
 
 def _is_customer_authenticated(session) -> bool:
@@ -131,16 +132,27 @@ def pay_now_placeholder(request):
     if not _is_customer_authenticated(request.session):
         return redirect("/account/login/?next=/cart/pay/")
 
+    customer_id = get_authenticated_customer_id(request.session)
+    addresses = get_customer_addresses(customer_id) if customer_id else []
+
     if request.method == "POST":
         try:
             origin = request.build_absolute_uri("/").rstrip("/")
-            checkout_url = create_checkout_session(request.session, origin)
+            delivery_type = request.POST.get("delivery_type", "").strip().upper()
+            address = None
+            if delivery_type == "DELIVERY":
+                address_id = request.POST.get("address_id", "").strip()
+                address = get_address_by_id(customer_id, address_id) if customer_id else None
+                if not address or str(address.get("district", "")).strip().lower() != "colombo":
+                    raise CheckoutError("Delivery is currently available only for saved addresses in Colombo district.")
+            checkout_url = create_checkout_session(request.session, origin, delivery_type, address)
             return redirect(checkout_url)
         except CheckoutError as exc:
             messages.error(request, str(exc))
 
     return render(request, "cart/pay_now_placeholder.html", {
         "stripe_test_configured": bool(getattr(settings, "STRIPE_SECRET_KEY", "").startswith("sk_test_")),
+        "addresses": addresses,
     })
 
 
