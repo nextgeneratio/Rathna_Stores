@@ -384,6 +384,9 @@ def _verify_item_ownership(session, cart_item_id: str) -> Tuple[str, str]:
     Returns (cart_row_id, product_id).
     Raises CartError if not found / ownership mismatch.
     """
+    if not _get_customer_id_from_session(session) and not session.get(SESSION_KEY):
+        raise CartError("Your cart session has expired. Please refresh and try again.")
+
     col, val = _resolve_cart_identity(session)
     if not val:
         raise CartError("Your cart session has expired. Please refresh and try again.")
@@ -494,7 +497,11 @@ def update_cart_item(session, cart_item_id: str, new_quantity: int) -> None:
     except (ValueError, AttributeError):
         raise CartError("Invalid cart item.")
 
-    # Check session has identity
+    # Check identity before resolving it: resolution creates a guest-cart ID,
+    # which is appropriate for add/read but not for a stale update request.
+    if not _get_customer_id_from_session(session) and not session.get(SESSION_KEY):
+        raise CartError("Your cart session has expired. Please refresh and try again.")
+
     col, val = _resolve_cart_identity(session)
     if not val:
         raise CartError("Your cart session has expired. Please refresh and try again.")
@@ -532,6 +539,9 @@ def remove_from_cart(session, cart_item_id: str) -> None:
         uuid.UUID(cart_item_id)
     except (ValueError, AttributeError):
         raise CartError("Invalid cart item.")
+
+    if not _get_customer_id_from_session(session) and not session.get(SESSION_KEY):
+        raise CartError("Your cart session has expired.")
 
     col, val = _resolve_cart_identity(session)
     if not val:

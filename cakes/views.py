@@ -52,14 +52,14 @@ def catalogue(request):
 
     has_filters = bool(search or category_id or price_preset or in_stock_only)
 
-    # Showcase products for hero (only on unfiltered home view)
+    # The catalogue query already includes products and their images. Reuse it
+    # for the home-page showcase instead of issuing the same two Supabase
+    # queries a second time on every unfiltered visit.
     showcase_products = []
     if not has_filters:
-        try:
-            from cart.services import get_showcase_products
-            showcase_products = get_showcase_products(limit=5)
-        except Exception:
-            showcase_products = []
+        showcase_products = [
+            product for product in products if product.get("primary_image")
+        ][:5]
 
     context = {
         "products": products,

@@ -16,6 +16,19 @@ logger = logging.getLogger(__name__)
 
 def cart_count(request):
     """Return the total number of units in the current session cart."""
+    # Staff templates never render the customer cart control. Avoid a remote
+    # cart lookup for every admin page (including the analytics dashboard).
+    match = getattr(request, "__dict__", {}).get("resolver_match")
+    if getattr(match, "namespace", "") in {"store_admin", "admin"}:
+        return {"cart_unit_count": 0}
+
+    # cart_detail has already loaded the complete cart. The view places this
+    # value on the request so rendering its base template does not fetch the
+    # same cart a second time just for the navigation badge.
+    known_count = getattr(request, "__dict__", {}).get("_rathna_cart_unit_count")
+    if known_count is not None:
+        return {"cart_unit_count": known_count}
+
     try:
         count = get_cart_unit_count(request.session)
     except Exception as exc:

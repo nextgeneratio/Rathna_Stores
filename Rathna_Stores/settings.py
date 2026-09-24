@@ -103,6 +103,18 @@ SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '')
 OPENROUTER_MODEL = os.getenv('OPENROUTER_MODEL', 'cohere/north-mini-code:free')
 
+# A small, process-local cache removes repeated remote reads during normal
+# browsing without treating changing cart/order data as permanently fresh.
+# Deployments with multiple workers can replace this with a shared Redis cache.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'rathna-stores',
+        'TIMEOUT': int(os.getenv('DJANGO_CACHE_TIMEOUT_SECONDS', '30')),
+    }
+}
+STAFF_DASHBOARD_CACHE_SECONDS = int(os.getenv('STAFF_DASHBOARD_CACHE_SECONDS', '20'))
+
 # Phase 4 payment settings remain disabled until the dedicated Stripe service
 # and verified webhook lifecycle are enabled in a test environment.
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')

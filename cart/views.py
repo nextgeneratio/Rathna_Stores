@@ -53,6 +53,9 @@ def cart_detail(request):
         }
         messages.error(request, "Your cart could not be loaded. Please try again.")
 
+    # Let the navigation context processor reuse this freshly calculated
+    # total instead of making an additional cart-count request while rendering.
+    request._rathna_cart_unit_count = cart["total_units"]
     return render(request, "cart/cart.html", {"cart": cart})
 
 

@@ -588,7 +588,7 @@ def get_customer_addresses(customer_id: str) -> list[dict]:
             .execute()
         )
         return resp.data or []
-    except APIError as exc:
+    except Exception as exc:
         logger.error("get_customer_addresses failed for %s: %s", customer_id, exc)
         return []
 

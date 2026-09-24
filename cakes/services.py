@@ -159,7 +159,7 @@ def get_active_categories() -> list[dict]:
             .execute()
         )
         return response.data or []
-    except APIError as exc:
+    except Exception as exc:
         logger.error("Failed to fetch categories: %s", exc)
         return []
 
@@ -175,7 +175,7 @@ def get_all_categories() -> list[dict]:
             .execute()
         )
         return response.data or []
-    except APIError as exc:
+    except Exception as exc:
         logger.error("Failed to fetch all categories: %s", exc)
         return []
 
@@ -193,7 +193,7 @@ def get_category_by_id(category_id: str) -> Optional[dict]:
         )
         data = response.data or []
         return data[0] if data else None
-    except APIError as exc:
+    except Exception as exc:
         logger.error("Failed to fetch category %s: %s", category_id, exc)
         return None
 
@@ -287,7 +287,7 @@ def get_catalogue_products(
         query = _build_catalogue_query(client, category_id, search, in_stock_only)
         response = query.execute()
         products = response.data or []
-    except APIError as exc:
+    except Exception as exc:
         logger.error("Failed to fetch catalogue products: %s", exc)
         return []
 
@@ -342,7 +342,7 @@ def get_product_by_id(product_id: str, active_only: bool = True) -> Optional[dic
 
         response = query.execute()
         data = response.data or []
-    except APIError as exc:
+    except Exception as exc:
         logger.error("Failed to fetch product %s: %s", product_id, exc)
         return None
 
@@ -370,7 +370,7 @@ def get_all_products_staff() -> list[dict]:
             .execute()
         )
         products = response.data or []
-    except APIError as exc:
+    except Exception as exc:
         logger.error("Failed to fetch staff products: %s", exc)
         return []
 
@@ -438,7 +438,7 @@ def _fetch_images_for_product(product_id: str) -> list[dict]:
             .execute()
         )
         return response.data or []
-    except APIError as exc:
+    except Exception as exc:
         logger.error("Failed to fetch images for product %s: %s", product_id, exc)
         return []
 
@@ -460,7 +460,7 @@ def _fetch_images_for_products(product_ids: list[str]) -> dict[str, list[dict]]:
             .execute()
         )
         rows = response.data or []
-    except APIError as exc:
+    except Exception as exc:
         logger.error("Failed to batch-fetch product images: %s", exc)
         return {}
 
@@ -603,7 +603,7 @@ def get_approved_reviews_for_product(product_id: str) -> dict:
             .execute()
         )
         rows = response.data or []
-    except APIError as exc:
+    except Exception as exc:
         logger.error("Failed to fetch reviews for product %s: %s", product_id, exc)
         return {"reviews": [], "average_rating": None, "count": 0}
 

@@ -15,6 +15,12 @@ def customer_auth(request):
       customer_authenticated: bool
       nav_customer: dict|None  (customer_id, first_name, last_name, profile_image_url)
     """
+    # The staff shell only uses Django's staff user and does not render the
+    # customer profile control. Skip its otherwise unnecessary Supabase lookup.
+    match = getattr(request, "__dict__", {}).get("resolver_match")
+    if getattr(match, "namespace", "") in {"store_admin", "admin"}:
+        return {"customer_authenticated": False, "nav_customer": None}
+
     try:
         ctx = get_customer_nav_context(request.session)
         return {

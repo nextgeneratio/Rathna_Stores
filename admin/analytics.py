@@ -10,6 +10,7 @@ from typing import Any
 
 import httpx
 from django.conf import settings
+from django.core.cache import cache
 from django.utils import timezone
 
 from Rathna_Stores.supabase_client import get_supabase_client
@@ -149,16 +150,32 @@ def _period_metrics(start: date, end: date, orders: list[dict], items: list[dict
 
 def get_dashboard_intelligence() -> dict[str, Any]:
     """Return dashboard counts; failures are surfaced so the view can warn staff."""
+    cache_key = "rathna_staff_dashboard_intelligence"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     today = timezone.localdate()
     start = today - timedelta(days=PURCHASE_WINDOW_DAYS - 1)
     customers = _rows("customers", "customer_id,is_active")
     orders = _qualifying_orders(start, today)
-    return {
+    result = {
         "registered_customer_count": sum(1 for customer in customers if customer.get("is_active")),
         "active_purchaser_count": len({str(order.get("customer_id")) for order in orders}),
         "purchase_window_days": PURCHASE_WINDOW_DAYS,
         "has_qualifying_purchases": bool(orders),
     }
+    cache.set(
+        cache_key,
+        result,
+        timeout=getattr(settings, "STAFF_DASHBOARD_CACHE_SECONDS", 20),
+    )
+    return result
+
+
+def clear_dashboard_intelligence_cache() -> None:
+    """Invalidate staff aggregate counts after a known relevant write."""
+    cache.delete("rathna_staff_dashboard_intelligence")
 
 
 def get_analytics_report(start: date, end: date) -> dict[str, Any]:
