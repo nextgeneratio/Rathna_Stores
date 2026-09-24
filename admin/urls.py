@@ -7,6 +7,7 @@ app_name = "store_admin"
 urlpatterns = [
     # Dashboard
     path("", views.dashboard, name="dashboard"),
+    path("analytics/", views.analytics, name="analytics"),
 
     # Product management
     path("products/", views.product_list, name="product_list"),

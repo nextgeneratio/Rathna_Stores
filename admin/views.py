@@ -11,12 +11,14 @@ import logging
 import mimetypes
 import re
 import uuid
+from datetime import timedelta
 from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import redirect, render
+from django.utils import timezone
 
 from cakes.services import (
     # Categories
@@ -41,6 +43,15 @@ from cakes.services import (
     get_public_url,
 )
 from .image_processing import ImageProcessingError, process_product_image
+from .analytics import (
+    AnalyticsError,
+    PURCHASE_WINDOW_DAYS,
+    build_opportunity_snapshot,
+    get_analytics_report,
+    get_dashboard_intelligence,
+    parse_report_range,
+    request_product_opportunities,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -237,6 +248,19 @@ def dashboard(request):
     inactive_count = len(products) - active_count
     out_of_stock = sum(1 for p in products if not p.get("in_stock"))
 
+    analytics_warning = ""
+    try:
+        dashboard_intelligence = get_dashboard_intelligence()
+    except Exception as exc:
+        logger.error("Dashboard customer intelligence failed: %s", exc)
+        dashboard_intelligence = {
+            "registered_customer_count": None,
+            "active_purchaser_count": None,
+            "purchase_window_days": PURCHASE_WINDOW_DAYS,
+            "has_qualifying_purchases": False,
+        }
+        analytics_warning = "Customer and purchase intelligence is temporarily unavailable."
+
     context = {
         "products": products[:10],  # recent 10 for quick view
         "product_count": len(products),
@@ -244,8 +268,53 @@ def dashboard(request):
         "inactive_count": inactive_count,
         "out_of_stock_count": out_of_stock,
         "category_count": len(categories),
+        **dashboard_intelligence,
+        "analytics_warning": analytics_warning,
     }
     return render(request, "store_admin/dashboard.html", context)
+
+
+@staff_required
+def analytics(request):
+    """Render bounded, staff-only purchase and product intelligence."""
+    try:
+        preset_days = int(request.GET.get("days", PURCHASE_WINDOW_DAYS))
+        if preset_days not in {7, 30, 90}:
+            preset_days = PURCHASE_WINDOW_DAYS
+        start, end = parse_report_range(
+            request.GET.get("start", ""),
+            request.GET.get("end", ""),
+            days=preset_days,
+        )
+    except AnalyticsError as exc:
+        messages.error(request, str(exc))
+        end = timezone.localdate()
+        start = end - timedelta(days=PURCHASE_WINDOW_DAYS - 1)
+
+    try:
+        report = get_analytics_report(start, end)
+    except Exception as exc:
+        logger.error("Staff analytics load failed: %s", exc)
+        report = None
+        messages.error(request, "Analytics are temporarily unavailable. Please try again.")
+
+    opportunities = None
+    if request.method == "POST":
+        try:
+            if report is None:
+                raise AnalyticsError("Load analytics before requesting opportunities.")
+            opportunities = request_product_opportunities(build_opportunity_snapshot(report))
+            messages.success(request, "Product opportunities refreshed from aggregate staff data.")
+        except AnalyticsError as exc:
+            messages.error(request, str(exc))
+
+    return render(request, "store_admin/analytics.html", {
+        "report": report,
+        "opportunities": opportunities,
+        "report_start": start,
+        "report_end": end,
+        "purchase_window_days": PURCHASE_WINDOW_DAYS,
+    })
 
 
 # ---------------------------------------------------------------------------

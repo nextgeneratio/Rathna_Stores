@@ -17,6 +17,7 @@
       </a>
       <ul class="nav-links" role="list">
         <li><a href="{% url 'store_admin:dashboard' %}" {% block nav_dashboard %}{% endblock %}>Dashboard</a></li>
+        <li><a href="{% url 'store_admin:analytics' %}" {% block nav_analytics %}{% endblock %}>Analytics</a></li>
         <li><a href="{% url 'store_admin:product_list' %}" {% block nav_products %}{% endblock %}>Products</a></li>
         <li><a href="{% url 'store_admin:category_list' %}" {% block nav_categories %}{% endblock %}>Categories</a></li>
         <li><a href="{% url 'cakes:catalogue' %}">← Public shop</a></li>

@@ -87,6 +87,26 @@ class StaffViewErrorHandlingTests(TestCase):
         response = self.client.get(reverse("store_admin:product_images", args=[pid]))
         self.assertEqual(response.status_code, 404)
 
+    @patch("admin.views.get_dashboard_intelligence", return_value={
+        "registered_customer_count": 4,
+        "active_purchaser_count": 2,
+        "purchase_window_days": 30,
+        "has_qualifying_purchases": True,
+    })
+    @patch("admin.views.get_all_categories", return_value=[])
+    @patch("admin.views.get_all_products_staff", return_value=[])
+    def test_dashboard_shows_customer_counts_without_recent_actions(self, mock_products, mock_categories, mock_intelligence):
+        response = self.client.get(reverse("store_admin:dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Registered customers")
+        self.assertContains(response, "Active purchasers")
+        self.assertNotContains(response, "Actions")
+
+    def test_analytics_is_staff_only(self):
+        self.client.logout()
+        response = self.client.get(reverse("store_admin:analytics"))
+        self.assertEqual(response.status_code, 302)
+
 
 class ImageUploadTests(TestCase):
 

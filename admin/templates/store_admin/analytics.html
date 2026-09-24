@@ -1,0 +1,76 @@
+{% extends "store_admin/base_admin.html" %}
+
+{% block title %}Staff analytics{% endblock %}
+{% block nav_analytics %}class="active"{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Staff analytics</h1>
+    <p class="page-header-meta">Paid orders only: DELIVERED or COMPLETED with payment status PAID.</p>
+  </div>
+</div>
+
+<form method="get" class="analytics-filters" aria-label="Analytics report range">
+  <label for="report-start">Start date</label>
+  <input id="report-start" name="start" type="date" value="{{ report_start|date:'Y-m-d' }}" required />
+  <label for="report-end">End date</label>
+  <input id="report-end" name="end" type="date" value="{{ report_end|date:'Y-m-d' }}" required />
+  <button class="btn btn-primary" type="submit">Run report</button>
+  <span class="analytics-presets" aria-label="Date presets">
+    <a class="btn btn-ghost btn-sm" href="?days=7">7 days</a>
+    <a class="btn btn-ghost btn-sm" href="?days=30">30 days</a>
+    <a class="btn btn-ghost btn-sm" href="?days=90">90 days</a>
+  </span>
+</form>
+
+{% if report %}
+<div class="stat-grid analytics-stat-grid">
+  <div class="stat-card"><div class="stat-label">Purchases</div><div class="stat-value">{{ report.order_count }}</div></div>
+  <div class="stat-card"><div class="stat-label">Unique purchasers</div><div class="stat-value">{{ report.unique_purchasers }}</div></div>
+  <div class="stat-card"><div class="stat-label">Gross sales</div><div class="stat-value">LKR {{ report.gross_sales|floatformat:2 }}</div></div>
+  <div class="stat-card"><div class="stat-label">Average order value</div><div class="stat-value">LKR {{ report.average_order_value|floatformat:2 }}</div></div>
+</div>
+
+<section class="analytics-section" aria-labelledby="trend-heading">
+  <h2 id="trend-heading">Purchase trend</h2>
+  {% if report.order_count %}
+  <table class="admin-table"><caption class="sr-only">Daily purchases and sales</caption><thead><tr><th>Date</th><th>Purchases</th><th>Sales</th></tr></thead><tbody>
+    {% for point in report.trend %}<tr><td>{{ point.date }}</td><td>{{ point.orders }}</td><td>LKR {{ point.sales|floatformat:2 }}</td></tr>{% endfor %}
+  </tbody></table>
+  {% else %}<p class="empty-state">There are no qualifying purchases in this date range yet.</p>{% endif %}
+</section>
+
+<div class="analytics-two-col">
+<section class="analytics-section" aria-labelledby="products-heading">
+  <h2 id="products-heading">Best-selling products</h2>
+  {% if report.best_sellers %}<table class="admin-table"><thead><tr><th>Product</th><th>Units</th><th>Purchases</th><th>Sales</th><th>Stock</th></tr></thead><tbody>
+    {% for product in report.best_sellers %}<tr><td><a href="{% url 'store_admin:product_edit' product_id=product.product_id %}">{{ product.product_name }}</a></td><td>{{ product.units_sold }}</td><td>{{ product.purchase_count }}</td><td>LKR {{ product.sales_value|floatformat:2 }}</td><td>{{ product.current_stock|default:'—' }}</td></tr>{% endfor %}
+  </tbody></table>{% else %}<p class="empty-state">No product sales to rank.</p>{% endif %}
+</section>
+
+<section class="analytics-section" aria-labelledby="reviews-heading">
+  <h2 id="reviews-heading">Review performance</h2>
+  <p>Total {{ report.review_metrics.total }} · Approved {{ report.review_metrics.approved }} · Pending {{ report.review_metrics.pending }}</p>
+  <p>Average approved rating: {{ report.review_metrics.average|default:'—' }}</p>
+  {% if report.review_metrics.products %}<table class="admin-table"><thead><tr><th>Product</th><th>Approved reviews</th><th>Average</th></tr></thead><tbody>{% for item in report.review_metrics.products %}<tr><td>{{ item.product_name }}</td><td>{{ item.count }}</td><td>{{ item.average|floatformat:1 }}</td></tr>{% endfor %}</tbody></table>{% endif %}
+</section>
+</div>
+
+<section class="analytics-section" aria-labelledby="customers-heading">
+  <h2 id="customers-heading">Customer activity</h2>
+  <p>Registered active customers: {{ report.customer_activity.registered }}</p>
+  <p>Active purchasers: customers with at least one qualifying order in this period: {{ report.customer_activity.active_purchasers }}</p>
+  <p>Repeat purchasers: customers with two or more qualifying orders in this period: {{ report.customer_activity.repeat_purchasers }}</p>
+  <p>New purchasers: customers with exactly one qualifying order in this period: {{ report.customer_activity.new_purchasers }}</p>
+</section>
+
+<section class="analytics-section" aria-labelledby="opportunities-heading">
+  <div class="section-heading-row"><h2 id="opportunities-heading">Product opportunities</h2><form method="post">{% csrf_token %}<button class="btn btn-secondary" type="submit">Refresh suggestions</button></form></div>
+  <p class="page-header-meta">AI output is a suggestion based only on aggregate report data. Staff review is required; nothing is changed automatically.</p>
+  {% if opportunities %}<div class="opportunity-list">{% for suggestion in opportunities %}<article class="opportunity-item"><h3>{{ suggestion.product_or_category }}</h3><p>{{ suggestion.rationale }}</p><p><strong>Signals:</strong> {{ suggestion.supporting_signals|join:', ' }}</p><p><strong>Audience:</strong> {{ suggestion.target_segment }} · <strong>Confidence:</strong> {{ suggestion.confidence }}</p><p><strong>Cautions:</strong> {{ suggestion.cautions|join:', ' }}</p></article>{% endfor %}</div>{% else %}<p class="empty-state">No suggestions requested for this report.</p>{% endif %}
+</section>
+{% else %}
+<p class="empty-state">Analytics are unavailable right now. No customer or sales data is being estimated.</p>
+{% endif %}
+{% endblock %}

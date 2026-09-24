@@ -975,6 +975,33 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 /* Table row actions */
 .row-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 
+/* Staff analytics */
+.analytics-filters {
+  display: flex;
+  align-items: end;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-6);
+}
+.analytics-filters label { font-size: .8125rem; font-weight: 700; color: var(--text-muted); }
+.analytics-filters input { padding: var(--sp-3); border: var(--border); border-radius: 6px; background: var(--input-bg); color: var(--text-dark); }
+.analytics-presets { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.analytics-section { background: var(--card-bg); border: var(--border); border-radius: var(--card-radius); padding: var(--sp-5); margin-bottom: var(--sp-6); overflow-x: auto; }
+.analytics-section h2 { font-size: 1.1rem; margin-bottom: var(--sp-4); }
+.analytics-two-col { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: var(--sp-6); }
+.section-heading-row { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-4); }
+.opportunity-item { border-top: var(--border); padding: var(--sp-4) 0; }
+.opportunity-item:first-child { border-top: 0; padding-top: 0; }
+.opportunity-item h3 { font-size: 1rem; margin-bottom: var(--sp-2); }
+.empty-state { color: var(--text-muted); padding: var(--sp-4) 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+@media (max-width: 768px) {
+  .analytics-two-col { grid-template-columns: 1fr; }
+  .analytics-filters { align-items: stretch; flex-direction: column; }
+  .analytics-filters input, .analytics-filters button { width: 100%; }
+}
+
 /* Image management grid */
 .image-manager-grid {
   display: grid;

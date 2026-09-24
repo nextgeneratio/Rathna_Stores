@@ -37,7 +37,21 @@
     <div class="stat-label">Categories</div>
     <div class="stat-value">{{ category_count }}</div>
   </div>
+  <div class="stat-card">
+    <div class="stat-label">Registered customers</div>
+    <div class="stat-value">{% if registered_customer_count is not None %}{{ registered_customer_count }}{% else %}Unavailable{% endif %}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Active purchasers (last {{ purchase_window_days }} days)</div>
+    <div class="stat-value">{% if active_purchaser_count is not None %}{{ active_purchaser_count }}{% else %}Unavailable{% endif %}</div>
+  </div>
 </div>
+
+{% if analytics_warning %}
+<div class="alert alert-warning" role="status">{{ analytics_warning }}</div>
+{% elif not has_qualifying_purchases %}
+<p class="page-header-meta" role="status">No qualifying paid and completed purchases have been recorded yet.</p>
+{% endif %}
 
 <!-- Recent products -->
 <div class="admin-table-wrap">
@@ -54,7 +68,6 @@
         <th scope="col">Price</th>
         <th scope="col">Stock</th>
         <th scope="col">Status</th>
-        <th scope="col">Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -89,11 +102,6 @@
           {% else %}
             <span class="chip chip-inactive">Inactive</span>
           {% endif %}
-        </td>
-        <td>
-          <div class="row-actions">
-            <a href="{% url 'store_admin:product_edit' product_id=product.product_id %}" class="btn btn-ghost btn-sm">Edit</a>
-          </div>
         </td>
       </tr>
       {% endfor %}
