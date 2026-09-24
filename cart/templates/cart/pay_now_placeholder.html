@@ -1,28 +1,36 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Checkout — Coming Soon — Rathna Stores{% endblock %}
+{% block title %}Stripe test checkout — Rathna Stores{% endblock %}
 
 {% block content %}
 <section style="padding:5rem 0;flex:1;">
   <div class="container" style="max-width:580px;text-align:center;">
-    <div style="font-size:4rem;margin-bottom:1.5rem;" aria-hidden="true">🔒</div>
+    <div style="font-size:4rem;margin-bottom:1.5rem;" aria-hidden="true">💳</div>
 
-    <h1 style="font-size:2rem;margin-bottom:1rem;">Payments are not available yet</h1>
+    <h1 style="font-size:2rem;margin-bottom:1rem;">Stripe test checkout</h1>
 
     <p style="color:var(--text-muted);font-size:1.05rem;line-height:1.75;margin-bottom:2rem;">
-      We are working on secure checkout and payment integration.
-      Your cart has been saved — come back soon and your items will still be here.
+      This is a development checkout. You will be redirected to Stripe-hosted
+      Checkout and must use test-mode payment details.
     </p>
 
     <div class="alert alert-info" role="note" style="text-align:left;margin-bottom:2rem;">
-      <strong>Important:</strong> No payment has been taken, no order has been placed,
-      and your card details have not been requested. This is a placeholder for future payment functionality.
+      <strong>Test mode only:</strong> no real money is taken. The order remains
+      pending until a verified Stripe webhook confirms payment. Returning from
+      Stripe alone does not mark an order paid.
     </div>
 
     <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
       <a href="{% url 'cart:cart' %}" class="btn btn-primary">← Back to cart</a>
-      <a href="{% url 'cakes:catalogue' %}" class="btn btn-secondary">Continue shopping</a>
+      {% if stripe_test_configured %}
+      <form method="post" action="{% url 'cart:pay_now' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary">Continue to Stripe test checkout</button>
+      </form>
+      {% else %}
+      <span class="btn btn-secondary" aria-disabled="true">Stripe test mode is not configured</span>
+      {% endif %}
     </div>
   </div>
 </section>

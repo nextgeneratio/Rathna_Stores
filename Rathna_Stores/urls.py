@@ -3,6 +3,7 @@ URL configuration for Rathna_Stores project.
 """
 from django.contrib import admin
 from django.urls import path, include
+from cart.views import stripe_webhook
 
 urlpatterns = [
     # Public cake catalogue — root of the site
@@ -14,6 +15,7 @@ urlpatterns = [
     # Customer account (register, login, logout, profile, addresses)
     path("account/", include("customers.urls", namespace="customers")),
     path("chat/", include("chatbot.urls", namespace="chatbot")),
+    path("payments/stripe/webhook/", stripe_webhook, name="stripe_webhook"),
 
     # Staff product management interface
     path("manage/", include("admin.urls", namespace="store_admin")),

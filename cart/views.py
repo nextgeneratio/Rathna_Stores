@@ -8,7 +8,10 @@ PayNow is gated behind customer authentication and remains a non-payment placeho
 from __future__ import annotations
 
 from django.contrib import messages
+from django.conf import settings
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from .services import (
@@ -18,6 +21,7 @@ from .services import (
     update_cart_item,
     remove_from_cart,
 )
+from .stripe_services import CheckoutError, create_checkout_session, handle_webhook
 
 
 def _is_customer_authenticated(session) -> bool:
@@ -122,15 +126,45 @@ def cart_remove(request):
 
 def pay_now_placeholder(request):
     """
-    Placeholder for future payment integration.
-
-    Guests are redirected to login. Authenticated customers see this page,
-    which makes clear that no payment is taken and no order is created.
-
-    This view does NOT call any payment service, create order or payment rows,
-    or touch stock quantities.
+    Show or start the Stripe test-mode checkout.
     """
     if not _is_customer_authenticated(request.session):
         return redirect("/account/login/?next=/cart/pay/")
 
-    return render(request, "cart/pay_now_placeholder.html")
+    if request.method == "POST":
+        try:
+            origin = request.build_absolute_uri("/").rstrip("/")
+            checkout_url = create_checkout_session(request.session, origin)
+            return redirect(checkout_url)
+        except CheckoutError as exc:
+            messages.error(request, str(exc))
+
+    return render(request, "cart/pay_now_placeholder.html", {
+        "stripe_test_configured": bool(getattr(settings, "STRIPE_SECRET_KEY", "").startswith("sk_test_")),
+    })
+
+
+def payment_success(request):
+    """Informational return page; only the webhook can confirm payment."""
+    return render(request, "cart/payment_result.html", {"result": "success"})
+
+
+def payment_cancel(request):
+    """Informational cancel page; pending orders remain non-purchases."""
+    return render(request, "cart/payment_result.html", {"result": "cancel"})
+
+
+@csrf_exempt
+def stripe_webhook(request):
+    """Receive Stripe's signed webhook without exposing a browser mutation path."""
+    if request.method != "POST":
+        return HttpResponse(status=405)
+    try:
+        handle_webhook(request.body, request.headers.get("Stripe-Signature", ""))
+    except CheckoutError as exc:
+        return HttpResponse(str(exc), status=400)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Stripe webhook processing failed")
+        return HttpResponse("Webhook processing failed.", status=500)
+    return HttpResponse(status=200)

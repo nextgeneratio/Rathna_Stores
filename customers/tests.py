@@ -769,17 +769,17 @@ class PayNowAuthGateTests(TestCase):
         session.save()
         resp = client.get(reverse("cart:pay_now"))
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "Payments are not available yet")
+        self.assertContains(resp, "Stripe test checkout")
 
-    def test_paynow_does_not_create_orders_or_payments(self):
-        """Verify no order/payment service imports in cart/views.py."""
+    def test_paynow_uses_hosted_test_checkout_contract(self):
+        """Verify browser requests cannot supply payment or stock mutations."""
         import inspect
         import cart.views as cv
         source = inspect.getsource(cv)
+        self.assertIn("create_checkout_session", source)
         self.assertNotIn("create_order", source)
         self.assertNotIn("create_payment", source)
-        self.assertNotIn("stripe", source)
-        self.assertNotIn("decrement", source)
+        self.assertNotIn("request.POST.get(\"total", source)
 
 
 # ── 14. Context processor ─────────────────────────────────────────────────────

@@ -2,6 +2,17 @@
 -- Apply only after reviewing in the Supabase SQL editor. Staff issue/revoke
 -- operations remain server-side; customers can read only their own active offers.
 
+ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'manual';
+ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS provider_checkout_session_id TEXT NULL;
+ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS provider_payment_intent_id TEXT NULL;
+ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS idempotency_key TEXT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_payments_provider_checkout_session
+ON public.payments(provider, provider_checkout_session_id)
+WHERE provider_checkout_session_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_payments_idempotency_key
+ON public.payments(idempotency_key)
+WHERE idempotency_key IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS public.customer_offers (
   offer_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID NOT NULL REFERENCES public.customers(customer_id) ON DELETE CASCADE,
@@ -48,6 +59,70 @@ CREATE TABLE IF NOT EXISTS public.stripe_webhook_events (
   order_id UUID NULL REFERENCES public.orders(order_id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS idx_stripe_webhook_events_order_id ON public.stripe_webhook_events(order_id);
+
+-- The paid transition must be one transaction: duplicate webhook delivery,
+-- stock decrement, cart clearing, payment/order state, and history all move
+-- together. The service calls this only after verifying Stripe's signature and
+-- paid state. The function is intentionally not exposed to browser clients.
+CREATE OR REPLACE FUNCTION public.finalize_stripe_payment(
+  p_event_id TEXT,
+  p_event_type TEXT,
+  p_order_id UUID,
+  p_session_id TEXT,
+  p_payment_intent TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_order public.orders%ROWTYPE;
+  v_item RECORD;
+  v_stock INTEGER;
+  v_event_status TEXT;
+BEGIN
+  INSERT INTO public.stripe_webhook_events(event_id, event_type, processing_status, order_id)
+  VALUES (p_event_id, p_event_type, 'FAILED', p_order_id)
+  ON CONFLICT (event_id) DO NOTHING;
+
+  SELECT processing_status INTO v_event_status
+  FROM public.stripe_webhook_events
+  WHERE event_id = p_event_id
+  FOR UPDATE;
+  IF v_event_status = 'PROCESSED' THEN
+    RETURN;
+  END IF;
+
+  SELECT * INTO v_order FROM public.orders WHERE order_id = p_order_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Order not found';
+  END IF;
+  IF v_order.payment_status = 'PAID' THEN
+    UPDATE public.stripe_webhook_events SET processing_status = 'PROCESSED', processed_at = now() WHERE event_id = p_event_id;
+    RETURN;
+  END IF;
+
+  FOR v_item IN SELECT product_id, quantity FROM public.order_items WHERE order_id = p_order_id LOOP
+    SELECT stock_quantity INTO v_stock FROM public.products WHERE product_id = v_item.product_id FOR UPDATE;
+    IF NOT FOUND OR v_stock < v_item.quantity THEN
+      RAISE EXCEPTION 'Insufficient stock for paid order';
+    END IF;
+    UPDATE public.products SET stock_quantity = stock_quantity - v_item.quantity, updated_at = now() WHERE product_id = v_item.product_id;
+  END LOOP;
+
+  UPDATE public.payments
+  SET payment_status = 'SUCCEEDED', provider_payment_intent_id = p_payment_intent, transaction_id = p_payment_intent, paid_at = now(), updated_at = now()
+  WHERE provider_checkout_session_id = p_session_id;
+  UPDATE public.orders SET order_status = 'CONFIRMED', payment_status = 'PAID', order_date = now(), updated_at = now() WHERE order_id = p_order_id;
+  DELETE FROM public.cart_items WHERE cart_id IN (SELECT cart_id FROM public.carts WHERE customer_id = v_order.customer_id);
+  INSERT INTO public.order_status_history(order_id, status, note) VALUES (p_order_id, 'CONFIRMED', 'Verified Stripe test payment');
+  UPDATE public.stripe_webhook_events SET processing_status = 'PROCESSED', order_id = COALESCE(order_id, p_order_id), processed_at = now() WHERE event_id = p_event_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.finalize_stripe_payment(TEXT, TEXT, UUID, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.finalize_stripe_payment(TEXT, TEXT, UUID, TEXT, TEXT) TO service_role;
 
 ALTER TABLE public.customer_offers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "customers read own active offers" ON public.customer_offers;

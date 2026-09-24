@@ -553,18 +553,27 @@ class CartViewTests(TestCase):
         resp = self.client.get(reverse("cart:pay_now"))
         self.assertEqual(resp.status_code, 200)
 
-    def test_pay_now_placeholder_says_not_available(self):
+    def test_pay_now_shows_test_mode_language(self):
         from customers.services import CUSTOMER_ID_SESSION_KEY
         session = self.client.session
         session[CUSTOMER_ID_SESSION_KEY] = "cccccccc-0000-0000-0000-000000000001"
         session.save()
         resp = self.client.get(reverse("cart:pay_now"))
-        self.assertContains(resp, "Payments are not available yet")
+        self.assertContains(resp, "Stripe test checkout")
 
-    def test_pay_now_does_not_create_order_or_payment(self):
-        """Confirm the PayNow view calls no order/payment service."""
-        # The view only renders a template — no service calls.
-        # We simply verify no order/payment import is referenced in views.py.
+    @patch("cart.views.create_checkout_session", return_value="https://checkout.stripe.test/session")
+    def test_pay_now_post_redirects_to_hosted_checkout(self, mock_checkout):
+        from customers.services import CUSTOMER_ID_SESSION_KEY
+        session = self.client.session
+        session[CUSTOMER_ID_SESSION_KEY] = "cccccccc-0000-0000-0000-000000000001"
+        session.save()
+        resp = self.client.post(reverse("cart:pay_now"))
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp["Location"], "https://checkout.stripe.test/session")
+        mock_checkout.assert_called_once()
+
+    def test_pay_now_does_not_accept_browser_payment_data(self):
+        """Checkout is delegated to Stripe-hosted Checkout, not Django forms."""
         import inspect
         import cart.views as cv
         source = inspect.getsource(cv)
@@ -572,6 +581,17 @@ class CartViewTests(TestCase):
         self.assertNotIn("create_payment", source)
         self.assertNotIn("charge", source)
         self.assertNotIn("gateway", source)
+
+    @patch("cart.views.handle_webhook")
+    def test_stripe_webhook_returns_200_after_service_processing(self, mock_webhook):
+        response = self.client.post(
+            "/payments/stripe/webhook/",
+            data=b"{}",
+            content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="signed",
+        )
+        self.assertEqual(response.status_code, 200)
+        mock_webhook.assert_called_once_with(b"{}", "signed")
 
     @patch("cart.views.get_cart", side_effect=Exception("Supabase down"))
     def test_cart_page_handles_service_failure(self, mock_cart):
