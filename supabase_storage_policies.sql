@@ -2,6 +2,26 @@
 -- Run this in the Supabase SQL Editor after creating the User_Profile bucket.
 -- Profile objects must use: customers/<customers.customer_id>/profile.<ext>
 
+-- Required alongside INSERT and UPDATE when the application uploads with
+-- upsert=true. This grants a customer visibility only of objects in their own
+-- profile directory; it does not grant access to another customer's images.
+DROP POLICY IF EXISTS "customer profile images select" ON storage.objects;
+CREATE POLICY "customer profile images select"
+ON storage.objects
+FOR SELECT
+TO authenticated
+USING (
+  bucket_id = 'User_Profile'
+  AND (storage.foldername(name))[1] = 'customers'
+  AND EXISTS (
+    SELECT 1
+    FROM public.customers AS c
+    WHERE c.customer_id::text = (storage.foldername(name))[2]
+      AND c.auth_user_id = (SELECT auth.uid())
+      AND c.is_active = TRUE
+  )
+);
+
 DROP POLICY IF EXISTS "customer profile images insert" ON storage.objects;
 CREATE POLICY "customer profile images insert"
 ON storage.objects

@@ -603,7 +603,9 @@ class ProfileImageTests(TestCase):
         self.assertIn("cdn.example.com", url)
         upload_call = mock_client.storage.from_.return_value.upload.call_args
         self.assertEqual(upload_call.args[0], "customers/cccc0000-0000-0000-0000-000000000001/profile.jpg")
-        self.assertTrue(upload_call.args[2]["upsert"])
+        # storage3 sends this option as an HTTP header, so it must be text.
+        # Passing Python True causes: 'bool' object has no attribute 'encode'.
+        self.assertEqual(upload_call.args[2]["upsert"], "true")
 
     @patch("customers.services.get_supabase_client")
     def test_upload_cleans_up_storage_on_db_failure(self, mock_get_client):

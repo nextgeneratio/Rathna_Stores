@@ -482,12 +482,14 @@ def upload_profile_image(
 
     client = get_supabase_client(access_token, refresh_token)
 
-    # Attempt upload (upsert=True to replace any existing file)
+    # Storage SDK file options become HTTP headers. `upsert` must therefore be
+    # the string header value, not Python's boolean True (which httpx cannot
+    # encode as a header value).
     try:
         client.storage.from_(PROFILE_BUCKET).upload(
             storage_path,
             file_bytes,
-            {"content-type": content_type, "upsert": True},
+            {"content-type": content_type, "upsert": "true"},
         )
     except Exception as exc:
         logger.error("Profile image storage upload failed for %s: %s", customer_id, exc)
