@@ -170,6 +170,26 @@ def create_checkout_session(session, origin: str, delivery_type: str = "PICKUP",
         raise CheckoutError("The test checkout could not be started. No payment was taken.") from exc
 
 
+def create_simulated_order(session, delivery_type: str = "PICKUP", address: dict | None = None) -> dict:
+    """Create a local pending demo order without payment or stock mutation."""
+    order, checkout, _cart = _create_pending_order(session, delivery_type, address)
+    client = get_supabase_client()
+    order_id = str(order["order_id"])
+    try:
+        client.table(PAYMENTS_TABLE).insert({
+            "order_id": order_id,
+            "payment_reference": f"simulated:{order_id}",
+            "amount": str(checkout["total"]),
+            "payment_method": "simulation",
+            "payment_status": "PENDING",
+        }).execute()
+        client.table(ORDERS_TABLE).update({"payment_method": "simulation", "payment_status": "PENDING"}).eq("order_id", order_id).execute()
+    except Exception as exc:
+        logger.error("Simulated order setup failed for %s: %s", order_id, exc)
+        raise CheckoutError("The simulated order could not be started. Please try again.") from exc
+    return {"order_id": order_id, "order_number": order.get("order_number", order_id), "total": checkout["total"]}
+
+
 def _claim_event(client, event_id: str, event_type: str) -> bool:
     try:
         client.table(WEBHOOK_EVENTS_TABLE).insert({"event_id": event_id, "event_type": event_type, "processing_status": "FAILED"}).execute()

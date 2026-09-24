@@ -39,7 +39,9 @@
       {% if stripe_test_configured %}
       <button type="submit" class="btn btn-secondary" style="width:100%;">Continue to Stripe test checkout</button>
       {% else %}
-      <span class="btn btn-secondary" aria-disabled="true" style="display:block;text-align:center;">Stripe test mode is not configured</span>
+      <input type="hidden" name="simulate_order" value="1" />
+      <button type="submit" class="btn btn-secondary" style="width:100%;">Place simulated test order</button>
+      <p class="form-hint" style="text-align:center;margin-top:.5rem;">Stripe is not configured. This creates a pending demo order only; no payment or stock change occurs.</p>
       {% endif %}
     </form>
     <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">

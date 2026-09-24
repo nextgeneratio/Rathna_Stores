@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Simulated order started — Rathna Stores{% endblock %}
+
+{% block content %}
+<section style="padding:5rem 0;flex:1;">
+  <div class="container" style="max-width:580px;text-align:center;">
+    <h1 style="font-size:2rem;margin-bottom:1rem;">Simulated order started</h1>
+    <p style="color:var(--text-muted);line-height:1.75;">Your demo order has been created and is awaiting payment confirmation.</p>
+    <div class="alert alert-info" role="status" style="text-align:left;margin:2rem 0;">
+      <strong>Test order:</strong> {{ order.order_number }}<br />
+      Total: LKR {{ order.total|floatformat:2 }}<br />
+      No real payment was taken, stock was not reduced, and this order is not counted as a completed purchase.
+    </div>
+    <a href="{% url 'cart:cart' %}" class="btn btn-primary">Return to cart</a>
+  </div>
+</section>
+{% endblock %}

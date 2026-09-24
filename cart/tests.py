@@ -7,7 +7,7 @@ Run with:  python manage.py test cart
 from decimal import Decimal
 from unittest.mock import MagicMock, patch, call
 
-from django.test import TestCase, Client, RequestFactory
+from django.test import TestCase, Client, RequestFactory, override_settings
 from django.contrib.sessions.backends.db import SessionStore
 from django.urls import reverse
 from django.contrib.auth.models import User
@@ -561,6 +561,7 @@ class CartViewTests(TestCase):
         resp = self.client.get(reverse("cart:pay_now"))
         self.assertContains(resp, "Stripe test checkout")
 
+    @override_settings(STRIPE_SECRET_KEY="sk_test_example")
     @patch("cart.views.create_checkout_session", return_value="https://checkout.stripe.test/session")
     def test_pay_now_post_redirects_to_hosted_checkout(self, mock_checkout):
         from customers.services import CUSTOMER_ID_SESSION_KEY
@@ -571,6 +572,18 @@ class CartViewTests(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(resp["Location"], "https://checkout.stripe.test/session")
         mock_checkout.assert_called_once()
+
+    @patch("cart.views.create_simulated_order", return_value={"order_number": "RS-DEMO-1", "total": Decimal("1250.00")})
+    def test_pay_now_can_start_simulated_order_without_stripe(self, mock_simulated):
+        from customers.services import CUSTOMER_ID_SESSION_KEY
+        session = self.client.session
+        session[CUSTOMER_ID_SESSION_KEY] = "cccccccc-0000-0000-0000-000000000001"
+        session.save()
+        resp = self.client.post(reverse("cart:pay_now"), {"delivery_type": "PICKUP", "simulate_order": "1"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "RS-DEMO-1")
+        self.assertContains(resp, "No real payment was taken")
+        mock_simulated.assert_called_once()
 
     def test_pay_now_does_not_accept_browser_payment_data(self):
         """Checkout is delegated to Stripe-hosted Checkout, not Django forms."""

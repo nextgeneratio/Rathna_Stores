@@ -21,7 +21,7 @@ from .services import (
     update_cart_item,
     remove_from_cart,
 )
-from .stripe_services import CheckoutError, create_checkout_session, handle_webhook
+from .stripe_services import CheckoutError, create_checkout_session, create_simulated_order, handle_webhook
 from customers.services import get_address_by_id, get_customer_addresses, get_authenticated_customer_id
 
 
@@ -145,6 +145,9 @@ def pay_now_placeholder(request):
                 address = get_address_by_id(customer_id, address_id) if customer_id else None
                 if not address or str(address.get("district", "")).strip().lower() != "colombo":
                     raise CheckoutError("Delivery is currently available only for saved addresses in Colombo district.")
+            if request.POST.get("simulate_order") == "1" or not getattr(settings, "STRIPE_SECRET_KEY", "").startswith("sk_test_"):
+                simulated = create_simulated_order(request.session, delivery_type, address)
+                return render(request, "cart/simulated_order.html", {"order": simulated})
             checkout_url = create_checkout_session(request.session, origin, delivery_type, address)
             return redirect(checkout_url)
         except CheckoutError as exc:
