@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from django.core.management.utils import get_random_secret_key
 
 # Load environment variables from .env.local
-load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env.local'))
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,12 +33,16 @@ def _env_bool(name: str, default: bool = False) -> bool:
 
 # SECURITY WARNING: keep the secret key used in production secret!
 DEBUG = _env_bool('DJANGO_DEBUG', False)
-SECRET_KEY = str(os.getenv('DJANGO_SECRET_KEY', '')).strip()
+
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', '').strip()
+
 if not SECRET_KEY:
     if DEBUG:
         SECRET_KEY = get_random_secret_key()
     else:
-        raise RuntimeError('DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is False.')
+        raise RuntimeError(
+            'DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is False.'
+        )
 
 # SECURITY WARNING: don't run with debug turned on in production!
 default_allowed_hosts = 'localhost,127.0.0.1,0.0.0.0,[::1],.vercel.app'
