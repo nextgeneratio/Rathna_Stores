@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 from decimal import Decimal
 from dotenv import load_dotenv
+from django.core.management.utils import get_random_secret_key
 
 # Load environment variables from .env.local
 load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env.local'))
@@ -25,13 +26,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = str(os.getenv(name, str(default))).strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-9a=k-f6g@yc@#%_vvrj@q%5lf#gvayc9tp4z7-iw&8h+8t7dgr'
+DEBUG = _env_bool('DJANGO_DEBUG', False)
+SECRET_KEY = str(os.getenv('DJANGO_SECRET_KEY', '')).strip()
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = get_random_secret_key()
+    else:
+        raise RuntimeError('DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is False.')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+default_allowed_hosts = 'localhost,127.0.0.1,0.0.0.0,[::1],.vercel.app'
+ALLOWED_HOSTS = [host.strip() for host in os.getenv('DJANGO_ALLOWED_HOSTS', default_allowed_hosts).split(',') if host.strip()]
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '[::1]']
+default_csrf_origins = 'https://*.vercel.app,http://localhost,http://127.0.0.1'
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', default_csrf_origins).split(',') if origin.strip()]
 
 
 # Application definition
@@ -61,6 +75,15 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = _env_bool('DJANGO_SECURE_SSL_REDIRECT', True)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.getenv('DJANGO_SECURE_HSTS_SECONDS', '31536000'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool('DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS', True)
+    SECURE_HSTS_PRELOAD = _env_bool('DJANGO_SECURE_HSTS_PRELOAD', True)
 
 ROOT_URLCONF = 'Rathna_Stores.urls'
 
