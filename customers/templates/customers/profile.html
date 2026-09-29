@@ -21,6 +21,14 @@
       </div>
     </div>
 
+    <div class="form-card" style="margin-bottom:2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+      <div>
+        <h2 style="font-size:1.15rem;margin-bottom:.35rem;">Order status</h2>
+        <p class="text-muted" style="margin:0;">View pickup readiness, delivery progress, and estimated arrival times.</p>
+      </div>
+      <a href="{% url 'customers:order_list' %}" class="btn btn-secondary">View my orders</a>
+    </div>
+
     {% if not customer %}
     <div class="alert alert-error" role="alert">Could not load your profile. Please try again.</div>
     {% else %}
