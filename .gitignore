@@ -219,6 +219,8 @@ __marimo__/
 
 #superbase connection api
 .env.local
+.env.local~
+.env*.local
 
 #database query
 database.sql
@@ -235,3 +237,5 @@ instruction.md
 #progress
 progress.md
 
+# Vercel
+.vercel/
