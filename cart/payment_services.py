@@ -30,34 +30,46 @@ def create_offline_payment_order(
     payment_method: str = "BANK_TRANSFER",
     payment_reference: str = "",
 ) -> dict:
-    """Create a pending order and payment record for staff verification."""
+    """Complete the simulated payment and place the order immediately."""
     payment_method = payment_method.strip().upper()
     payment_reference = payment_reference.strip()
     if payment_method not in MANUAL_PAYMENT_METHODS:
         raise CheckoutError("Choose a supported payment method.")
-    if len(payment_reference) < 4 or len(payment_reference) > 120:
-        raise CheckoutError("Enter the payment or transfer reference shown by your bank.")
 
     order, checkout, _cart = _create_pending_order(session, delivery_type, address, require_distance=True)
     order_id = str(order["order_id"])
+    payment_reference = payment_reference or f"simulated:{order_id}"
     client = get_supabase_client()
+    now = timezone.now().isoformat()
     try:
         client.table(PAYMENTS_TABLE).insert({
             "order_id": order_id,
             "payment_reference": payment_reference,
             "amount": str(checkout["total"]),
             "payment_method": payment_method,
-            "payment_status": "PENDING",
+            "payment_status": "SUCCEEDED",
+            "paid_at": now,
         }).execute()
+        _finalize_paid_order(client, order_id, str(order["customer_id"]))
         client.table(ORDERS_TABLE).update({
             "payment_method": payment_method,
-            "payment_status": "PENDING",
+            "payment_status": "PAID",
+            "order_status": "CONFIRMED",
+            "updated_at": now,
         }).eq("order_id", order_id).execute()
+        client.table("order_status_history").insert({
+            "order_id": order_id,
+            "status": "CONFIRMED",
+            "note": "Simulated payment completed",
+        }).execute()
     except Exception as exc:
         client.table(ORDERS_TABLE).update({
             "order_status": "CANCELLED",
             "payment_status": "FAILED",
         }).eq("order_id", order_id).execute()
+        client.table(PAYMENTS_TABLE).update({
+            "payment_status": "FAILED",
+        }).eq("payment_reference", payment_reference).execute()
         raise CheckoutError("The payment request could not be recorded. Please try again.") from exc
 
     return {
@@ -65,6 +77,7 @@ def create_offline_payment_order(
         "order_number": order.get("order_number", order_id),
         "total": checkout["total"],
         "payment_reference": payment_reference,
+        "payment_status": "PAID",
     }
 
 

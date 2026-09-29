@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Payment submitted — Rathna Stores{% endblock %}
+{% block title %}Payment complete — Rathna Stores{% endblock %}
 
 {% block content %}
 <section style="padding:5rem 0;flex:1;">
   <div class="container" style="max-width:580px;text-align:center;">
     <div style="font-size:4rem;margin-bottom:1.5rem;" aria-hidden="true">✓</div>
-    <h1 style="font-size:2rem;margin-bottom:1rem;">Payment submitted</h1>
+    <h1 style="font-size:2rem;margin-bottom:1rem;">Payment complete</h1>
     <p style="color:var(--text-muted);font-size:1.05rem;line-height:1.75;margin-bottom:2rem;">
-      Your payment reference was recorded. The store team will verify the payment and confirm your order.
+      Your simulated payment was completed and your order has been placed.
     </p>
     <div class="form-card" style="text-align:left;margin-bottom:2rem;">
       <p><strong>Order:</strong> {{ order.order_number }}</p>
       <p><strong>Total:</strong> LKR {{ order.total }}</p>
-      <p><strong>Payment reference:</strong> {{ order.payment_reference }}</p>
-      <p class="form-hint" style="margin:1rem 0 0;">Do not submit the same reference again. Your order remains pending until staff verification.</p>
+      <p><strong>Payment status:</strong> Paid</p>
+      <p class="form-hint" style="margin:1rem 0 0;">You can track pickup and delivery progress from My orders.</p>
     </div>
     <a href="{% url 'cakes:catalogue' %}" class="btn btn-primary">Continue shopping</a>
   </div>

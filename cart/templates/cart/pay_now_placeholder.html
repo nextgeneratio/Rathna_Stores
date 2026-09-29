@@ -11,11 +11,11 @@
     <h1 style="font-size:2rem;margin-bottom:1rem;">Complete payment</h1>
 
     <p style="color:var(--text-muted);font-size:1.05rem;line-height:1.75;margin-bottom:2rem;">
-      Choose an offline payment method and enter the reference from your payment confirmation.
+      Press Pay now to complete this simulated payment and place your order immediately.
     </p>
 
     <div class="alert alert-info" role="note" style="text-align:left;margin-bottom:2rem;">
-      Your order is not confirmed until the store verifies the payment reference. Keep your bank or payment receipt.
+      This is a simulated payment. Your order will be marked paid and confirmed immediately.
     </div>
 
     <form method="post" action="{% url 'cart:pay_now' %}" style="text-align:left;margin:0 auto 1.5rem;max-width:480px;">
@@ -52,16 +52,7 @@
         <strong>Estimated total: LKR <span id="checkout-total">{{ cart_subtotal }}</span></strong>
         <span id="delivery-summary">Pickup has no delivery fee.</span>
       </div>
-      <div style="border-top:var(--border);margin-top:1rem;padding-top:1rem;">
-        <label for="payment_method" style="display:block;font-weight:700;margin-bottom:.5rem;">Payment method</label>
-        <select id="payment_method" name="payment_method" required style="width:100%;padding:.75rem;border:var(--border);border-radius:6px;margin-bottom:1rem;">
-          <option value="BANK_TRANSFER">Bank transfer</option>
-          <option value="CASH_ON_DELIVERY">Cash on delivery</option>
-        </select>
-        <label for="payment_reference" style="display:block;font-weight:700;margin-bottom:.5rem;">Payment reference</label>
-        <input id="payment_reference" name="payment_reference" required minlength="4" maxlength="120" style="width:100%;padding:.75rem;border:var(--border);border-radius:6px;margin-bottom:.5rem;" placeholder="Bank receipt or delivery reference" />
-      </div>
-      <button type="submit" class="btn btn-secondary" style="width:100%;">Submit payment for verification</button>
+      <button type="submit" class="btn btn-secondary" style="width:100%;">Pay now</button>
     </form>
     <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
       <a href="{% url 'cart:cart' %}" class="btn btn-primary">← Back to cart</a>
