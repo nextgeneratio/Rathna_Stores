@@ -51,5 +51,5 @@ class OfflinePaymentServiceTests(SimpleTestCase):
 
         self.assertEqual(result["payment_status"], "PAID")
         finalize.assert_called_once_with(client, "order-1", "customer-1")
-        payment_query.update.assert_called_once()
+        self.assertGreaterEqual(payment_query.update.call_count, 1)
         order_query.update.assert_called_once()

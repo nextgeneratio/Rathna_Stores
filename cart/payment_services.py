@@ -6,6 +6,7 @@ must verify that payment before the order is marked paid and finalized.
 from __future__ import annotations
 
 from datetime import timedelta
+from decimal import Decimal
 from typing import Any
 
 from django.utils import timezone
@@ -21,6 +22,20 @@ from .stripe_services import (
 
 
 MANUAL_PAYMENT_METHODS = {"BANK_TRANSFER", "CASH_ON_DELIVERY"}
+
+
+def _refresh_customer_spend(client, customer_id: str) -> None:
+    """Keep the customer aggregate aligned with all paid order snapshots."""
+    paid_orders = client.table(ORDERS_TABLE).select("total_amount").eq(
+        "customer_id", customer_id
+    ).eq("payment_status", "PAID").execute().data or []
+    total_spend = sum(
+        (Decimal(str(order.get("total_amount") or "0")) for order in paid_orders),
+        Decimal("0.00"),
+    )
+    client.table("customers").update({
+        "total_spend": str(total_spend.quantize(Decimal("0.01"))),
+    }).eq("customer_id", customer_id).execute()
 
 
 def create_offline_payment_order(
@@ -62,6 +77,7 @@ def create_offline_payment_order(
             "status": "CONFIRMED",
             "note": "Simulated payment completed",
         }).execute()
+        _refresh_customer_spend(client, str(order["customer_id"]))
     except Exception as exc:
         client.table(ORDERS_TABLE).update({
             "order_status": "CANCELLED",
@@ -122,6 +138,7 @@ def confirm_offline_payment(order_id: str) -> dict:
         "status": "CONFIRMED",
         "note": "Offline payment verified by staff",
     }).execute()
+    _refresh_customer_spend(client, str(order["customer_id"]))
     return {**order, "payment_status": "PAID", "order_status": "CONFIRMED"}
 
 

@@ -115,6 +115,9 @@ BEGIN
   SET payment_status = 'SUCCEEDED', provider_payment_intent_id = p_payment_intent, transaction_id = p_payment_intent, paid_at = now(), updated_at = now()
   WHERE provider_checkout_session_id = p_session_id;
   UPDATE public.orders SET order_status = 'CONFIRMED', payment_status = 'PAID', order_date = now(), updated_at = now() WHERE order_id = p_order_id;
+  UPDATE public.customers
+  SET total_spend = COALESCE(total_spend, 0) + v_order.total_amount, updated_at = now()
+  WHERE customer_id = v_order.customer_id;
   DELETE FROM public.cart_items WHERE cart_id IN (SELECT cart_id FROM public.carts WHERE customer_id = v_order.customer_id);
   INSERT INTO public.order_status_history(order_id, status, note) VALUES (p_order_id, 'CONFIRMED', 'Verified Stripe test payment');
   UPDATE public.stripe_webhook_events SET processing_status = 'PROCESSED', order_id = COALESCE(order_id, p_order_id), processed_at = now() WHERE event_id = p_event_id;

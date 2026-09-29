@@ -12,6 +12,7 @@ import mimetypes
 import re
 import uuid
 from datetime import timedelta
+from decimal import Decimal
 from functools import wraps
 
 from django.contrib import messages
@@ -304,6 +305,12 @@ def customer_detail(request, customer_id):
         customer = customers[0]
         addresses = client.table("customer_addresses").select("*").eq("customer_id", str(customer_id)).execute().data or []
         orders = client.table("orders").select("*").eq("customer_id", str(customer_id)).order("created_at", desc=True).execute().data or []
+        paid_total = sum(
+            (Decimal(str(order.get("total_amount") or "0")) for order in orders if order.get("payment_status") == "PAID"),
+            Decimal("0.00"),
+        ).quantize(Decimal("0.01"))
+        customer["total_spend"] = str(paid_total)
+        client.table("customers").update({"total_spend": str(paid_total)}).eq("customer_id", str(customer_id)).execute()
         payments = []
         for order in orders:
             rows = client.table("payments").select("*").eq("order_id", order["order_id"]).execute().data or []
