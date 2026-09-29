@@ -132,9 +132,17 @@
   clip: rect(0,0,0,0); white-space: nowrap; }
 
 @media (max-width: 768px) {
-  .showcase-slide { grid-template-columns: 1fr; }
-  .showcase-image-wrap { display: none; }
-  .showcase { min-height: auto; }
+  .showcase { min-height: 680px; }
+  .showcase-slide {
+    grid-template-columns: 1fr;
+    gap: var(--sp-6);
+    padding: var(--sp-12) var(--sp-5) var(--sp-16);
+  }
+  .showcase-image-wrap {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4/3;
+  }
 }
 </style>
 {% endblock %}
