@@ -1,0 +1,14 @@
+{% extends "store_admin/base_admin.html" %}
+{% block title %}Customers{% endblock %}
+{% block nav_customers %}class="active"{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Customers</h1><p class="page-header-meta">Account and order history</p></div></div>
+<div class="admin-table-wrap">
+<table class="admin-table"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th></th></tr></thead><tbody>
+{% for customer in customers %}<tr>
+<td>{{ customer.first_name }} {{ customer.last_name }}</td><td>{{ customer.email|default:"—" }}</td><td>{{ customer.phone_number|default:"—" }}</td>
+<td>{% if customer.is_active %}Active{% else %}Inactive{% endif %}</td>
+<td><a class="btn btn-ghost btn-sm" href="{% url 'store_admin:customer_detail' customer_id=customer.customer_id %}">View details</a></td>
+</tr>{% empty %}<tr><td colspan="5">No customers found.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

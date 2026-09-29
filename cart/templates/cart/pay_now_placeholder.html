@@ -1,24 +1,21 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Stripe test checkout — Rathna Stores{% endblock %}
+{% block title %}Complete payment — Rathna Stores{% endblock %}
 
 {% block content %}
 <section style="padding:5rem 0;flex:1;">
   <div class="container" style="max-width:580px;text-align:center;">
     <div style="font-size:4rem;margin-bottom:1.5rem;" aria-hidden="true">💳</div>
 
-    <h1 style="font-size:2rem;margin-bottom:1rem;">Stripe test checkout</h1>
+    <h1 style="font-size:2rem;margin-bottom:1rem;">Complete payment</h1>
 
     <p style="color:var(--text-muted);font-size:1.05rem;line-height:1.75;margin-bottom:2rem;">
-      This is a development checkout. You will be redirected to Stripe-hosted
-      Checkout and must use test-mode payment details.
+      Choose an offline payment method and enter the reference from your payment confirmation.
     </p>
 
     <div class="alert alert-info" role="note" style="text-align:left;margin-bottom:2rem;">
-      <strong>Test mode only:</strong> no real money is taken. The order remains
-      pending until a verified Stripe webhook confirms payment. Returning from
-      Stripe alone does not mark an order paid.
+      Your order is not confirmed until the store verifies the payment reference. Keep your bank or payment receipt.
     </div>
 
     <form method="post" action="{% url 'cart:pay_now' %}" style="text-align:left;margin:0 auto 1.5rem;max-width:480px;">
@@ -31,18 +28,40 @@
       <label for="checkout-address" style="display:block;font-weight:700;margin-bottom:.5rem;">Delivery address</label>
       <select id="checkout-address" name="address_id" style="width:100%;padding:.75rem;border:var(--border);border-radius:6px;margin-bottom:.5rem;">
         <option value="">Choose a saved Colombo address for delivery</option>
-        {% for address in addresses %}
-        <option value="{{ address.address_id }}">{{ address.recipient_name }} — {{ address.address_line_1 }}, {{ address.city }}, {{ address.district|default:"District not set" }}</option>
+        {% for address in delivery_options %}
+        <option value="{{ address.address_id }}" data-fee="{{ address.delivery_fee|default:'' }}" data-distance="{{ address.distance_km|default:'' }}">{{ address.recipient_name }} — {{ address.address_line_1 }}, {{ address.city }}, {{ address.district|default:"District not set" }}{% if address.delivery_fee %} (LKR {{ address.delivery_fee }}){% else %} (location required){% endif %}</option>
         {% endfor %}
       </select>
+      <div class="form-card" style="margin:1rem 0;text-align:left;padding:1rem;">
+        <p style="font-weight:700;margin-bottom:.75rem;">Or enter a new Colombo address</p>
+        <input name="recipient_name" placeholder="Recipient name" style="width:100%;padding:.65rem;margin-bottom:.5rem;" />
+        <input name="phone_number" placeholder="Phone number" style="width:100%;padding:.65rem;margin-bottom:.5rem;" />
+        <input name="address_line_1" placeholder="Address line 1" style="width:100%;padding:.65rem;margin-bottom:.5rem;" />
+        <input name="address_line_2" placeholder="Address line 2 (optional)" style="width:100%;padding:.65rem;margin-bottom:.5rem;" />
+        <input name="city" placeholder="City or sub-area" list="colombo-cities" style="width:100%;padding:.65rem;margin-bottom:.5rem;" />
+        <datalist id="colombo-cities"></datalist>
+        <input name="district" value="Colombo" placeholder="District" style="width:100%;padding:.65rem;margin-bottom:.5rem;" />
+        <input name="postal_code" placeholder="Postal code" style="width:100%;padding:.65rem;margin-bottom:.5rem;" />
+        <input type="hidden" name="latitude" id="checkout-latitude" />
+        <input type="hidden" name="longitude" id="checkout-longitude" />
+        <button type="button" id="checkout-location" class="btn btn-ghost btn-sm">Use my current location</button>
+        <span id="checkout-location-status" class="form-hint" aria-live="polite"></span>
+      </div>
       <p class="form-hint" style="margin-bottom:1rem;">Delivery is available only when the selected saved address has district Colombo. Pickup does not require an address.</p>
-      {% if stripe_test_configured %}
-      <button type="submit" class="btn btn-secondary" style="width:100%;">Continue to Stripe test checkout</button>
-      {% else %}
-      <input type="hidden" name="simulate_order" value="1" />
-      <button type="submit" class="btn btn-secondary" style="width:100%;">Place simulated test order</button>
-      <p class="form-hint" style="text-align:center;margin-top:.5rem;">Stripe is not configured. This creates a pending demo order only; no payment or stock change occurs.</p>
-      {% endif %}
+      <div class="alert alert-info" role="status" style="margin-bottom:1rem;">
+        <strong>Estimated total: LKR <span id="checkout-total">{{ cart_subtotal }}</span></strong>
+        <span id="delivery-summary">Pickup has no delivery fee.</span>
+      </div>
+      <div style="border-top:var(--border);margin-top:1rem;padding-top:1rem;">
+        <label for="payment_method" style="display:block;font-weight:700;margin-bottom:.5rem;">Payment method</label>
+        <select id="payment_method" name="payment_method" required style="width:100%;padding:.75rem;border:var(--border);border-radius:6px;margin-bottom:1rem;">
+          <option value="BANK_TRANSFER">Bank transfer</option>
+          <option value="CASH_ON_DELIVERY">Cash on delivery</option>
+        </select>
+        <label for="payment_reference" style="display:block;font-weight:700;margin-bottom:.5rem;">Payment reference</label>
+        <input id="payment_reference" name="payment_reference" required minlength="4" maxlength="120" style="width:100%;padding:.75rem;border:var(--border);border-radius:6px;margin-bottom:.5rem;" placeholder="Bank receipt or delivery reference" />
+      </div>
+      <button type="submit" class="btn btn-secondary" style="width:100%;">Submit payment for verification</button>
     </form>
     <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
       <a href="{% url 'cart:cart' %}" class="btn btn-primary">← Back to cart</a>
@@ -50,4 +69,68 @@
     </div>
   </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const locationButton = document.getElementById('checkout-location');
+  const locationStatus = document.getElementById('checkout-location-status');
+  const subtotal = Number('{{ cart_subtotal }}');
+  const deliveryTypeInputs = document.querySelectorAll('input[name="delivery_type"]');
+  const addressSelect = document.getElementById('checkout-address');
+  const totalElement = document.getElementById('checkout-total');
+  const deliverySummary = document.getElementById('delivery-summary');
+  const storeLatitude = Number('{{ store_latitude }}');
+  const storeLongitude = Number('{{ store_longitude }}');
+  const baseFee = Number('{{ delivery_base_fee }}');
+  const ratePerKm = Number('{{ delivery_rate_per_km }}');
+  function updateCheckoutTotal() {
+    const delivery = document.querySelector('input[name="delivery_type"]:checked')?.value === 'DELIVERY';
+    let fee = 0;
+    let distance = '';
+    if (delivery) {
+      const option = addressSelect.options[addressSelect.selectedIndex];
+      fee = Number(option?.dataset.fee || 0);
+      distance = option?.dataset.distance || '';
+      const latitude = Number(document.getElementById('checkout-latitude').value);
+      const longitude = Number(document.getElementById('checkout-longitude').value);
+      if (!addressSelect.value && Number.isFinite(latitude) && Number.isFinite(longitude) && latitude && longitude) {
+        const radians = value => value * Math.PI / 180;
+        const a = Math.sin((radians(latitude - storeLatitude)) / 2) ** 2 + Math.cos(radians(storeLatitude)) * Math.cos(radians(latitude)) * Math.sin((radians(longitude - storeLongitude)) / 2) ** 2;
+        distance = (6371 * 2 * Math.asin(Math.sqrt(a))).toFixed(2);
+        fee = baseFee + Number(distance) * ratePerKm;
+      }
+    }
+    totalElement.textContent = (subtotal + fee).toFixed(2);
+    deliverySummary.textContent = delivery ? `Delivery: LKR ${fee.toFixed(2)}${distance ? ` (${distance} km)` : ' (location required)'}` : 'Pickup has no delivery fee.';
+  }
+  deliveryTypeInputs.forEach(input => input.addEventListener('change', updateCheckoutTotal));
+  addressSelect.addEventListener('change', updateCheckoutTotal);
+  if (locationButton) {
+    locationButton.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        locationStatus.textContent = 'Location sharing is not supported by this browser.';
+        return;
+      }
+      locationStatus.textContent = 'Requesting your location...';
+      navigator.geolocation.getCurrentPosition((position) => {
+        document.getElementById('checkout-latitude').value = position.coords.latitude.toFixed(7);
+        document.getElementById('checkout-longitude').value = position.coords.longitude.toFixed(7);
+        locationStatus.textContent = 'Location captured for this address.';
+        updateCheckoutTotal();
+      }, () => { locationStatus.textContent = 'Location permission was not granted.'; });
+    });
+  }
+  fetch('{{ location_api_base_url }}/cities/byDistrict/5')
+    .then(response => response.ok ? response.json() : [])
+    .then(cities => {
+      const list = document.getElementById('colombo-cities');
+      (Array.isArray(cities) ? cities : []).forEach(city => {
+        const option = document.createElement('option');
+        option.value = city.name || city.city || city.sub_area || '';
+        if (option.value) list.appendChild(option);
+      });
+    })
+    .catch(() => {});
+</script>
 {% endblock %}

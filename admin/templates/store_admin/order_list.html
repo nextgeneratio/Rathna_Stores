@@ -1,0 +1,9 @@
+{% extends "store_admin/base_admin.html" %}
+{% block title %}Orders{% endblock %}
+{% block nav_orders %}class="active"{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Orders</h1><p class="page-header-meta">Update status to notify customers.</p></div></div>
+<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Order</th><th>Customer</th><th>Type</th><th>Total</th><th>Status</th><th>Update</th></tr></thead><tbody>
+{% for order in orders %}<tr><td>{{ order.order_number }}</td><td>{{ order.customer.first_name }} {{ order.customer.last_name }}<br>{{ order.customer.email }}</td><td>{{ order.delivery_type|title }}</td><td>LKR {{ order.total_amount }}</td><td>{{ order.order_status }}</td><td><form method="post" action="{% url 'store_admin:order_status_update' order_id=order.order_id %}">{% csrf_token %}<select name="order_status" required>{% for status in status_choices %}<option value="{{ status }}" {% if status == order.order_status %}selected{% endif %}>{{ status|title }}</option>{% endfor %}</select><button class="btn btn-primary btn-sm" type="submit">Save</button></form></td></tr>{% empty %}<tr><td colspan="6">No orders found.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

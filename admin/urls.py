@@ -8,6 +8,11 @@ urlpatterns = [
     # Dashboard
     path("", views.dashboard, name="dashboard"),
     path("analytics/", views.analytics, name="analytics"),
+    path("customers/", views.customer_list, name="customer_list"),
+    path("customers/<uuid:customer_id>/", views.customer_detail, name="customer_detail"),
+    path("payments/pending/", views.pending_payments, name="pending_payments"),
+    path("orders/", views.order_list, name="order_list"),
+    path("orders/<uuid:order_id>/status/", views.order_status_update, name="order_status_update"),
 
     # Product management
     path("products/", views.product_list, name="product_list"),

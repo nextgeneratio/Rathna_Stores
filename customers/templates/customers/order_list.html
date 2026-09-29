@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}My orders — Rathna Stores{% endblock %}
+{% block content %}
+<section style="padding:var(--sp-12) 0;flex:1;"><div class="container" style="max-width:900px;">
+<div class="page-header"><div><h1>My orders</h1><p class="page-header-meta">Track pickup and delivery progress.</p></div><a href="{% url 'customers:profile' %}" class="btn btn-ghost">← Profile</a></div>
+<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Order</th><th>Type</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>
+{% for order in orders %}<tr><td>{{ order.order_number }}</td><td>{{ order.delivery_type|title }}</td><td>LKR {{ order.total_amount }}</td><td>{{ order.order_status|title }}{% if order.order_status == 'READY' and order.delivery_type == 'PICKUP' %}<br><strong>Your cake is ready for pickup.</strong>{% endif %}</td><td><a class="btn btn-ghost btn-sm" href="{% url 'customers:order_detail' order_id=order.order_id %}">Track</a></td></tr>{% empty %}<tr><td colspan="5">No orders yet.</td></tr>{% endfor %}
+</tbody></table></div>
+</div></section>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Order {{ order.order_number }} — Rathna Stores{% endblock %}
+{% block content %}
+<section style="padding:var(--sp-12) 0;flex:1;"><div class="container" style="max-width:760px;">
+<div class="page-header"><div><h1>Order {{ order.order_number }}</h1><p class="page-header-meta">{{ order.order_status|title }} · {{ order.delivery_type|title }}</p></div><a href="{% url 'customers:order_list' %}" class="btn btn-ghost">← My orders</a></div>
+{% if order.order_status == 'READY' and order.delivery_type == 'PICKUP' %}<div class="alert alert-success" role="status"><strong>Your cake is ready for pickup.</strong> Please collect it from Rathna Stores.</div>{% endif %}
+{% if order.delivery_type == 'DELIVERY' %}
+<div class="form-card" style="margin-bottom:1.5rem;"><h2>Delivery tracking</h2><p><strong>Status:</strong> {{ order.order_status|title }}</p><p><strong>Destination:</strong> {{ order.delivery_address_line_1 }}, {{ order.delivery_city }}, {{ order.delivery_district }}</p>{% if order.delivery_distance_km %}<p><strong>Distance:</strong> {{ order.delivery_distance_km }} km</p>{% endif %}{% if order.estimated_delivery_at %}<p><strong>Estimated arrival:</strong> {{ order.estimated_delivery_at|date:"Y-m-d H:i" }}</p>{% endif %}<p class="form-hint">This is a simulated delivery estimate and will arrive within 24 hours of confirmation.</p></div>
+{% endif %}
+<div class="form-card" style="margin-bottom:1.5rem;"><h2>Payment summary</h2><p>Subtotal: LKR {{ order.subtotal }}</p><p>Delivery: LKR {{ order.delivery_fee }}</p><p><strong>Total: LKR {{ order.total_amount }}</strong></p><p>Payment: {{ order.payment_status|title }}</p></div>
+<div class="form-card"><h2>Status updates</h2><ol>{% for event in order.status_history %}<li style="margin:.75rem 0;"><strong>{{ event.status|title }}</strong>{% if event.note %} — {{ event.note }}{% endif %}<br><span class="text-muted">{{ event.changed_at|date:"Y-m-d H:i" }}</span></li>{% empty %}<li>Your order has been received and is being prepared.</li>{% endfor %}</ol></div>
+</div></section>
+{% endblock %}

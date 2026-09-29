@@ -622,7 +622,7 @@ def get_address_by_id(customer_id: str, address_id: str) -> Optional[dict]:
 def _EDITABLE_ADDRESS_FIELDS():
     return {
         "recipient_name", "phone_number", "address_line_1", "address_line_2",
-        "city", "district", "postal_code", "is_default",
+        "city", "district", "postal_code", "latitude", "longitude", "is_default",
     }
 
 
@@ -635,6 +635,13 @@ def create_address(customer_id: str, data: dict) -> dict:
     """
     safe = {k: v for k, v in data.items() if k in _EDITABLE_ADDRESS_FIELDS()}
     safe["customer_id"] = customer_id  # always set from server
+
+    for coordinate in ("latitude", "longitude"):
+        if safe.get(coordinate) not in (None, ""):
+            try:
+                safe[coordinate] = float(safe[coordinate])
+            except (TypeError, ValueError):
+                raise CustomerError("Location coordinates must be valid numbers.")
 
     # Validate required fields
     for req in ("recipient_name", "address_line_1", "city"):
@@ -671,6 +678,13 @@ def update_address(customer_id: str, address_id: str, data: dict) -> dict:
     safe = {k: v for k, v in data.items() if k in _EDITABLE_ADDRESS_FIELDS()}
     if not safe:
         raise CustomerError("No updatable fields provided.")
+
+    for coordinate in ("latitude", "longitude"):
+        if safe.get(coordinate) not in (None, ""):
+            try:
+                safe[coordinate] = float(safe[coordinate])
+            except (TypeError, ValueError):
+                raise CustomerError("Location coordinates must be valid numbers.")
 
     if safe.get("is_default"):
         _clear_default_address(customer_id, exclude_id=address_id)

@@ -122,6 +122,12 @@ STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 STRIPE_TEST_MODE = os.getenv('STRIPE_TEST_MODE', 'True').lower() == 'true'
 DELIVERY_FEE_LKR = Decimal(os.getenv('DELIVERY_FEE_LKR', '0.00'))
+DELIVERY_BASE_FEE_LKR = Decimal(os.getenv('DELIVERY_BASE_FEE_LKR', '150.00'))
+DELIVERY_RATE_PER_KM_LKR = Decimal(os.getenv('DELIVERY_RATE_PER_KM_LKR', '80.00'))
+DELIVERY_ESTIMATE_HOURS = int(os.getenv('DELIVERY_ESTIMATE_HOURS', '24'))
+STORE_LATITUDE = os.getenv('STORE_LATITUDE', '6.9271')
+STORE_LONGITUDE = os.getenv('STORE_LONGITUDE', '79.8612')
+LOCATION_API_BASE_URL = os.getenv('LOCATION_API_BASE_URL', 'https://locatesrilanka.herokuapp.com').rstrip('/')
 
 
 # Password validation

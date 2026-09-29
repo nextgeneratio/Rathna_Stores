@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from Rathna_Stores.supabase_client import get_supabase_client
 from .services import CART_ITEMS_TABLE, CARTS_TABLE, get_cart
+from .delivery_services import DeliveryError, delivery_quote
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ def _cart_for_checkout(session) -> tuple[dict, str]:
     return {**cart, "items": items}, str(customer_id)
 
 
-def _create_pending_order(session, delivery_type: str = "PICKUP", address: dict | None = None) -> tuple[dict, dict, dict]:
+def _create_pending_order(session, delivery_type: str = "PICKUP", address: dict | None = None, require_distance: bool = False) -> tuple[dict, dict, dict]:
     cart, customer_id = _cart_for_checkout(session)
     client = get_supabase_client()
     order_id = str(uuid.uuid4())
@@ -64,7 +65,18 @@ def _create_pending_order(session, delivery_type: str = "PICKUP", address: dict 
         raise CheckoutError("Choose a Colombo delivery address before continuing.")
     if delivery_type == "DELIVERY" and str(address.get("district", "")).strip().lower() != "colombo":
         raise CheckoutError("Delivery is currently available only for saved addresses in Colombo district.")
-    delivery_fee = _money(getattr(settings, "DELIVERY_FEE_LKR", Decimal("0.00"))) if delivery_type == "DELIVERY" else Decimal("0.00")
+    delivery_quote_data = None
+    if delivery_type == "DELIVERY":
+        if require_distance and (address.get("latitude") in (None, "") or address.get("longitude") in (None, "")):
+            raise CheckoutError("Use the location button to share coordinates for delivery pricing.")
+        if address.get("latitude") not in (None, "") and address.get("longitude") not in (None, ""):
+            try:
+                delivery_quote_data = delivery_quote(address)
+            except DeliveryError as exc:
+                raise CheckoutError(str(exc)) from exc
+        delivery_fee = delivery_quote_data["fee"] if delivery_quote_data else _money(getattr(settings, "DELIVERY_FEE_LKR", Decimal("0.00")))
+    else:
+        delivery_fee = Decimal("0.00")
     subtotal = _money(cart.get("subtotal") or "0")
     total = _money(subtotal + delivery_fee)
     order = {
@@ -91,6 +103,8 @@ def _create_pending_order(session, delivery_type: str = "PICKUP", address: dict 
             "delivery_city": address.get("city"),
             "delivery_district": address.get("district"),
             "delivery_postal_code": address.get("postal_code"),
+            "delivery_distance_km": str(delivery_quote_data["distance_km"]) if delivery_quote_data else None,
+            "estimated_delivery_at": delivery_quote_data["estimated_at"].isoformat() if delivery_quote_data else None,
         })
     created = client.table(ORDERS_TABLE).insert(order).execute().data or []
     if not created:

@@ -22,7 +22,9 @@ from .services import (
     remove_from_cart,
 )
 from .stripe_services import CheckoutError, create_checkout_session, create_simulated_order, handle_webhook
-from customers.services import get_address_by_id, get_customer_addresses, get_authenticated_customer_id
+from .payment_services import create_offline_payment_order
+from .delivery_services import delivery_quote, DeliveryError
+from customers.services import create_address, get_address_by_id, get_customer_addresses, get_authenticated_customer_id, update_address
 
 
 def _is_customer_authenticated(session) -> bool:
@@ -126,39 +128,78 @@ def cart_remove(request):
     return redirect("cart:cart")
 
 
-# ── PayNow — authentication gated placeholder ─────────────────────────────────
+# ── PayNow — authentication-gated offline payment flow ───────────────────────
 
 def pay_now_placeholder(request):
-    """
-    Show or start the Stripe test-mode checkout.
-    """
+    """Create an offline payment request; Stripe remains available internally."""
     if not _is_customer_authenticated(request.session):
         return redirect("/account/login/?next=/cart/pay/")
 
     customer_id = get_authenticated_customer_id(request.session)
     addresses = get_customer_addresses(customer_id) if customer_id else []
+    cart = get_cart(request.session)
+    delivery_options = []
+    for saved_address in addresses:
+        option = dict(saved_address)
+        try:
+            quote = delivery_quote(saved_address)
+            option.update({"delivery_fee": quote["fee"], "distance_km": quote["distance_km"]})
+        except DeliveryError:
+            option.update({"delivery_fee": None, "distance_km": None})
+        delivery_options.append(option)
 
     if request.method == "POST":
         try:
-            origin = request.build_absolute_uri("/").rstrip("/")
             delivery_type = request.POST.get("delivery_type", "").strip().upper()
             address = None
             if delivery_type == "DELIVERY":
                 address_id = request.POST.get("address_id", "").strip()
                 address = get_address_by_id(customer_id, address_id) if customer_id else None
+                if address and request.POST.get("latitude", "").strip() and request.POST.get("longitude", "").strip():
+                    address = update_address(customer_id, address_id, {
+                        "latitude": request.POST.get("latitude", "").strip(),
+                        "longitude": request.POST.get("longitude", "").strip(),
+                    })
+                if not address and request.POST.get("address_line_1", "").strip():
+                    manual_district = request.POST.get("district", "").strip()
+                    if manual_district.lower() != "colombo":
+                        raise CheckoutError("Delivery is available only in Colombo district.")
+                    address = create_address(customer_id, {
+                        "recipient_name": request.POST.get("recipient_name", "").strip(),
+                        "phone_number": request.POST.get("phone_number", "").strip() or None,
+                        "address_line_1": request.POST.get("address_line_1", "").strip(),
+                        "address_line_2": request.POST.get("address_line_2", "").strip() or None,
+                        "city": request.POST.get("city", "").strip(),
+                        "district": manual_district,
+                        "postal_code": request.POST.get("postal_code", "").strip() or None,
+                        "latitude": request.POST.get("latitude", "").strip() or None,
+                        "longitude": request.POST.get("longitude", "").strip() or None,
+                        "is_default": False,
+                    })
                 if not address or str(address.get("district", "")).strip().lower() != "colombo":
-                    raise CheckoutError("Delivery is currently available only for saved addresses in Colombo district.")
-            if request.POST.get("simulate_order") == "1" or not getattr(settings, "STRIPE_SECRET_KEY", "").startswith("sk_test_"):
-                simulated = create_simulated_order(request.session, delivery_type, address)
-                return render(request, "cart/simulated_order.html", {"order": simulated})
-            checkout_url = create_checkout_session(request.session, origin, delivery_type, address)
-            return redirect(checkout_url)
+                    raise CheckoutError("Delivery is available only for an address in Colombo district.")
+            order = create_offline_payment_order(
+                request.session,
+                delivery_type,
+                address,
+                request.POST.get("payment_method", "BANK_TRANSFER"),
+                request.POST.get("payment_reference", ""),
+            )
+            return render(request, "cart/offline_payment_pending.html", {"order": order})
         except CheckoutError as exc:
+            messages.error(request, str(exc))
+        except Exception as exc:
             messages.error(request, str(exc))
 
     return render(request, "cart/pay_now_placeholder.html", {
-        "stripe_test_configured": bool(getattr(settings, "STRIPE_SECRET_KEY", "").startswith("sk_test_")),
         "addresses": addresses,
+        "delivery_options": delivery_options,
+        "cart_subtotal": cart.get("subtotal") or "0.00",
+        "store_latitude": getattr(settings, "STORE_LATITUDE", "6.9271"),
+        "store_longitude": getattr(settings, "STORE_LONGITUDE", "79.8612"),
+        "delivery_base_fee": getattr(settings, "DELIVERY_BASE_FEE_LKR", "150.00"),
+        "delivery_rate_per_km": getattr(settings, "DELIVERY_RATE_PER_KM_LKR", "80.00"),
+        "location_api_base_url": getattr(settings, "LOCATION_API_BASE_URL", ""),
     })
 
 

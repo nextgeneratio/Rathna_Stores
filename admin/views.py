@@ -19,7 +19,9 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
+from Rathna_Stores.supabase_client import get_supabase_client
 from cakes.services import (
     # Categories
     get_all_categories,
@@ -54,6 +56,7 @@ from .analytics import (
     parse_report_range,
     request_product_opportunities,
 )
+from cart.payment_services import CheckoutError, confirm_offline_payment, get_pending_offline_payments
 
 logger = logging.getLogger(__name__)
 
@@ -274,6 +277,111 @@ def dashboard(request):
         "analytics_warning": analytics_warning,
     }
     return render(request, "store_admin/dashboard.html", context)
+
+
+@staff_required
+def customer_list(request):
+    """List registered customers for staff follow-up and support."""
+    try:
+        customers = get_supabase_client().table("customers").select(
+            "customer_id,first_name,last_name,email,phone_number,is_active,created_at"
+        ).order("created_at", desc=True).execute().data or []
+    except Exception as exc:
+        logger.error("Customer list load failed: %s", exc)
+        customers = []
+        messages.error(request, "Customer details are temporarily unavailable.")
+    return render(request, "store_admin/customer_list.html", {"customers": customers})
+
+
+@staff_required
+def customer_detail(request, customer_id):
+    """Show a customer's profile, saved addresses, orders, and payments."""
+    client = get_supabase_client()
+    try:
+        customers = client.table("customers").select("*").eq("customer_id", str(customer_id)).limit(1).execute().data or []
+        if not customers:
+            raise Http404("Customer not found.")
+        customer = customers[0]
+        addresses = client.table("customer_addresses").select("*").eq("customer_id", str(customer_id)).execute().data or []
+        orders = client.table("orders").select("*").eq("customer_id", str(customer_id)).order("created_at", desc=True).execute().data or []
+        payments = []
+        for order in orders:
+            rows = client.table("payments").select("*").eq("order_id", order["order_id"]).execute().data or []
+            payments.extend(rows)
+    except Http404:
+        raise
+    except Exception as exc:
+        logger.error("Customer detail load failed for %s: %s", customer_id, exc)
+        messages.error(request, "Customer details are temporarily unavailable.")
+        return render(request, "store_admin/customer_detail.html", {"customer": {}, "addresses": [], "orders": [], "payments": []})
+    return render(request, "store_admin/customer_detail.html", {
+        "customer": customer, "addresses": addresses, "orders": orders, "payments": payments,
+    })
+
+
+@staff_required
+def pending_payments(request):
+    """Review and confirm customer-submitted offline payment references."""
+    if request.method == "POST":
+        try:
+            confirm_offline_payment(request.POST.get("order_id", "").strip())
+            messages.success(request, "Payment confirmed and order placed.")
+        except CheckoutError as exc:
+            messages.error(request, str(exc))
+        except Exception as exc:
+            logger.error("Offline payment confirmation failed: %s", exc)
+            messages.error(request, "The payment could not be confirmed.")
+        return redirect("store_admin:pending_payments")
+    try:
+        payments = get_pending_offline_payments()
+    except Exception as exc:
+        logger.error("Pending payment load failed: %s", exc)
+        payments = []
+        messages.error(request, "Pending payments are temporarily unavailable.")
+    return render(request, "store_admin/pending_payments.html", {"payments": payments})
+
+
+ORDER_STATUS_CHOICES = ("CONFIRMED", "PROCESSING", "READY", "OUT_FOR_DELIVERY", "DELIVERED", "COMPLETED", "CANCELLED")
+
+
+@staff_required
+def order_list(request):
+    """Give staff the simulated order-status controls used for notifications."""
+    try:
+        client = get_supabase_client()
+        orders = client.table("orders").select("*").order("created_at", desc=True).execute().data or []
+        customers = client.table("customers").select("customer_id,first_name,last_name,email").execute().data or []
+        customer_map = {str(customer["customer_id"]): customer for customer in customers}
+        for order in orders:
+            order["customer"] = customer_map.get(str(order.get("customer_id")), {})
+    except Exception as exc:
+        logger.error("Order list load failed: %s", exc)
+        orders = []
+        messages.error(request, "Orders are temporarily unavailable.")
+    return render(request, "store_admin/order_list.html", {"orders": orders, "status_choices": ORDER_STATUS_CHOICES})
+
+
+@staff_required
+@require_POST
+def order_status_update(request, order_id):
+    """Update status and append a customer-visible status-history event."""
+    status = request.POST.get("order_status", "").strip().upper()
+    if status not in ORDER_STATUS_CHOICES:
+        messages.error(request, "Invalid order status.")
+        return redirect("store_admin:order_list")
+    try:
+        client = get_supabase_client()
+        client.table("orders").update({"order_status": status, "updated_at": timezone.now().isoformat()}).eq("order_id", str(order_id)).execute()
+        client.table("order_status_history").insert({
+            "order_id": str(order_id),
+            "status": status,
+            "note": "Status updated by store staff",
+        }).execute()
+        messages.success(request, "Order status updated.")
+    except Exception as exc:
+        logger.error("Order status update failed for %s: %s", order_id, exc)
+        messages.error(request, "The order status could not be updated.")
+    return redirect("store_admin:order_list")
 
 
 @staff_required

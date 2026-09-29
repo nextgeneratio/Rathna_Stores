@@ -59,6 +59,12 @@
             <input type="text" id="postal_code" name="postal_code" class="form-control"
                    value="{{ form_data.postal_code|default:'' }}" />
           </div>
+          <div class="form-group full-width">
+            <button type="button" id="use-location" class="btn btn-ghost btn-sm">Use my current location</button>
+            <span id="location-status" class="form-hint" aria-live="polite"></span>
+            <input type="hidden" id="latitude" name="latitude" value="{{ form_data.latitude|default:'' }}" />
+            <input type="hidden" id="longitude" name="longitude" value="{{ form_data.longitude|default:'' }}" />
+          </div>
           <div class="form-group">
             <label class="form-check" style="margin-top:1.5rem;">
               <input type="checkbox" name="is_default" value="1"
@@ -77,4 +83,19 @@
     </form>
   </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.getElementById('use-location').addEventListener('click', () => {
+    const status = document.getElementById('location-status');
+    if (!navigator.geolocation) { status.textContent = 'Location sharing is not supported by this browser.'; return; }
+    status.textContent = 'Requesting your location...';
+    navigator.geolocation.getCurrentPosition((position) => {
+      document.getElementById('latitude').value = position.coords.latitude.toFixed(7);
+      document.getElementById('longitude').value = position.coords.longitude.toFixed(7);
+      status.textContent = 'Location captured and will be saved with this address.';
+    }, () => { status.textContent = 'Location permission was not granted.'; });
+  });
+</script>
 {% endblock %}

@@ -1,0 +1,9 @@
+{% extends "store_admin/base_admin.html" %}
+{% block title %}Pending payments{% endblock %}
+{% block nav_payments %}class="active"{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Pending payments</h1><p class="page-header-meta">Verify the receipt before confirming an order.</p></div></div>
+<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Order</th><th>Reference</th><th>Method</th><th>Amount</th><th>Delivery</th><th></th></tr></thead><tbody>
+{% for payment in payments %}<tr><td>{{ payment.order.order_number }}</td><td>{{ payment.payment_reference }}</td><td>{{ payment.payment_method }}</td><td>LKR {{ payment.amount }}</td><td>{{ payment.order.delivery_city|default:"Pickup" }}{% if payment.order.delivery_district %}, {{ payment.order.delivery_district }}{% endif %}</td><td><form method="post">{% csrf_token %}<input type="hidden" name="order_id" value="{{ payment.order_id }}" /><button class="btn btn-primary btn-sm" type="submit">Confirm paid</button></form></td></tr>{% empty %}<tr><td colspan="6">No pending offline payments.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

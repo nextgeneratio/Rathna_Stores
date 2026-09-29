@@ -44,6 +44,7 @@ from .services import (
     merge_guest_cart_into_customer_cart,
     _safe_next,
 )
+from .order_services import get_customer_order, get_customer_orders
 
 logger = logging.getLogger(__name__)
 
@@ -228,6 +229,33 @@ def profile(request):
 
 
 @_require_customer
+def order_list(request):
+    """Show customer-owned orders and their current simulated status."""
+    customer_id = get_authenticated_customer_id(request.session)
+    try:
+        orders = get_customer_orders(customer_id)
+    except Exception as exc:
+        logger.error("Customer order list failed: %s", exc)
+        orders = []
+        messages.error(request, "Your orders are temporarily unavailable.")
+    return render(request, "customers/order_list.html", {"orders": orders})
+
+
+@_require_customer
+def order_detail(request, order_id):
+    """Show the authenticated customer's status timeline and delivery ETA."""
+    customer_id = get_authenticated_customer_id(request.session)
+    try:
+        order = get_customer_order(customer_id, str(order_id))
+    except Exception as exc:
+        logger.error("Customer order detail failed for %s: %s", order_id, exc)
+        order = None
+    if not order:
+        raise Http404("Order not found.")
+    return render(request, "customers/order_detail.html", {"order": order})
+
+
+@_require_customer
 def profile_edit(request):
     """GET: show edit form. POST: update profile fields."""
     customer_id = get_authenticated_customer_id(request.session)
@@ -409,5 +437,7 @@ def _extract_address_form(post) -> dict:
         "city": post.get("city", "").strip(),
         "district": post.get("district", "").strip() or None,
         "postal_code": post.get("postal_code", "").strip() or None,
+        "latitude": post.get("latitude", "").strip() or None,
+        "longitude": post.get("longitude", "").strip() or None,
         "is_default": post.get("is_default") == "1",
     }

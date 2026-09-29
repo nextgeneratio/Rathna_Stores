@@ -14,6 +14,8 @@ urlpatterns = [
     # Profile
     path("profile/",       views.profile,        name="profile"),
     path("profile/edit/",  views.profile_edit,   name="profile_edit"),
+    path("orders/", views.order_list, name="order_list"),
+    path("orders/<uuid:order_id>/", views.order_detail, name="order_detail"),
 
     # Profile image
     path("profile/image/upload/", views.profile_image_upload, name="image_upload"),

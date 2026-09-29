@@ -1,0 +1,14 @@
+{% extends "store_admin/base_admin.html" %}
+{% block title %}Customer details{% endblock %}
+{% block nav_customers %}class="active"{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{{ customer.first_name }} {{ customer.last_name }}</h1><p class="page-header-meta">{{ customer.email|default:"No email" }} · {{ customer.phone_number|default:"No phone" }}</p></div><a class="btn btn-ghost" href="{% url 'store_admin:customer_list' %}">← Customers</a></div>
+<div class="stat-grid">
+<div class="stat-card"><div class="stat-label">Total spend</div><div class="stat-value">LKR {{ customer.total_spend|default:"0.00" }}</div></div>
+<div class="stat-card"><div class="stat-label">Loyalty points</div><div class="stat-value">{{ customer.loyalty_points|default:"0" }}</div></div>
+<div class="stat-card"><div class="stat-label">Orders</div><div class="stat-value">{{ orders|length }}</div></div>
+</div>
+<div class="form-card" style="margin:1.5rem 0;"><h2>Profile</h2><p>Registered: {{ customer.created_at|default:"—" }}</p><p>Member: {% if customer.is_member %}Yes{% else %}No{% endif %}</p><p>Notifications: email {% if customer.is_email_notifications_enabled %}on{% else %}off{% endif %}, SMS {% if customer.is_sms_notifications_enabled %}on{% else %}off{% endif %}</p></div>
+<h2>Saved addresses</h2><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Recipient</th><th>Address</th><th>District</th><th>Coordinates</th></tr></thead><tbody>{% for address in addresses %}<tr><td>{{ address.recipient_name }}</td><td>{{ address.address_line_1 }}, {{ address.city }}</td><td>{{ address.district|default:"—" }}</td><td>{{ address.latitude|default:"—" }}, {{ address.longitude|default:"—" }}</td></tr>{% empty %}<tr><td colspan="4">No saved addresses.</td></tr>{% endfor %}</tbody></table></div>
+<h2 style="margin-top:1.5rem;">Orders and payments</h2><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Order</th><th>Total</th><th>Order status</th><th>Payment</th></tr></thead><tbody>{% for order in orders %}<tr><td>{{ order.order_number }}</td><td>LKR {{ order.total_amount }}</td><td>{{ order.order_status }}</td><td>{{ order.payment_status }} · {{ order.payment_method|default:"—" }}</td></tr>{% empty %}<tr><td colspan="4">No orders.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}
