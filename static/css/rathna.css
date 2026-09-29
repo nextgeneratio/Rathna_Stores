@@ -1759,3 +1759,108 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   .shop-chat { right: .75rem; bottom: .75rem; }
   .shop-chat-panel { width: calc(100vw - 1.5rem); }
 }
+
+/* =============================================================
+   Responsive composition — desktop / tablet / mobile
+   ============================================================= */
+
+/* Desktop: give the shop room to breathe and keep comparison dense. */
+@media (min-width: 1200px) {
+  .container { padding-inline: var(--sp-8); }
+  .site-nav .container { gap: var(--sp-12); }
+  .catalogue-section { padding-block: 5.5rem; }
+  .catalogue-layout { grid-template-columns: 280px minmax(0, 1fr); gap: 3rem; }
+  .product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-6); }
+  .product-card .card-body { padding: var(--sp-5); }
+  .showcase { min-height: 560px; }
+}
+
+/* Tablet: preserve visual hierarchy while using the full middle-width canvas. */
+@media (min-width: 769px) and (max-width: 1199px) {
+  .container { padding-inline: var(--sp-8); }
+  .site-nav { height: 68px; }
+  .site-nav .container { gap: var(--sp-4); }
+  .nav-links { gap: var(--sp-4); }
+  .nav-links a { font-size: .875rem; }
+
+  .showcase { min-height: 500px; }
+  .showcase-slide { gap: var(--sp-8); padding: var(--sp-12) var(--sp-8) var(--sp-16); }
+  .showcase h1 { font-size: clamp(2.1rem, 4vw, 3rem); }
+
+  .catalogue-section { padding-block: var(--sp-12); }
+  .catalogue-layout { grid-template-columns: 1fr; gap: var(--sp-6); }
+  .filter-panel {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr auto;
+    gap: var(--sp-4);
+    align-items: end;
+    padding: var(--sp-5);
+  }
+  .filter-panel h3 { grid-column: 1 / -1; margin: 0; }
+  .filter-group { margin: 0; }
+  .filter-actions { flex-direction: row; margin: 0; }
+  .filter-actions .btn { min-width: 110px; justify-content: center; }
+  .product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4); }
+  .card-body { padding: var(--sp-3); }
+  .card-name { font-size: 1rem; }
+
+  .product-detail-grid { grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr); gap: var(--sp-8); }
+  .cart-layout { grid-template-columns: minmax(0, 1fr) 300px; gap: var(--sp-6); }
+}
+
+/* Mobile: one deliberate reading column, larger touch targets, no overflow. */
+@media (max-width: 768px) {
+  .container { padding-inline: var(--sp-5); }
+  .site-nav { height: auto; min-height: 64px; }
+  .site-nav .container { min-height: 64px; padding-block: var(--sp-3); }
+  .nav-brand { font-size: 1.35rem; }
+  .nav-toggle { padding: var(--sp-3); }
+  .nav-links.open, .nav-actions.open { display: flex; }
+  .nav-actions.open { align-items: stretch; }
+  .nav-actions.open .nav-cart-btn,
+  .nav-actions.open .nav-profile-wrap,
+  .nav-actions.open .nav-login-btn { width: 100%; }
+
+  .showcase { min-height: 680px; }
+  .showcase-slide { padding-inline: var(--sp-5); }
+  .showcase-text { max-width: 34rem; }
+  .showcase h1 { font-size: clamp(2rem, 9vw, 2.75rem); }
+  .showcase-actions .btn { min-height: 48px; }
+  .showcase-image-wrap { border-radius: 10px; }
+
+  .catalogue-section { padding-block: var(--sp-10); }
+  .section-heading { margin-bottom: var(--sp-8); }
+  .section-heading p { font-size: .95rem; }
+  .catalogue-layout { gap: var(--sp-6); }
+  .filter-panel { padding: var(--sp-5); }
+  .filter-actions .btn { min-height: 44px; }
+  .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+  .card-image-wrap { aspect-ratio: 1 / 1; }
+  .card-body { padding: var(--sp-3); gap: var(--sp-1); }
+  .card-name { font-size: .95rem; }
+  .card-price { font-size: 1rem; }
+  .card-add-to-cart { padding: 0 var(--sp-3) var(--sp-3); }
+  .card-add-btn { min-height: 42px; }
+
+  .product-detail-section, .reviews-section { padding-block: var(--sp-8); }
+  .product-detail-grid { gap: var(--sp-6); }
+  .product-meta { gap: var(--sp-3); }
+  .product-info-panel .btn { min-height: 46px; }
+  .cart-section { padding-block: var(--sp-8); }
+  .cart-summary-card { padding: var(--sp-5); }
+  .footer-bottom { padding-inline: var(--sp-4); }
+}
+
+@media (max-width: 480px) {
+  .container { padding-inline: var(--sp-4); }
+  .showcase { min-height: 650px; }
+  .showcase-slide { padding-block: var(--sp-10) var(--sp-16); }
+  .showcase-eyebrow { font-size: .75rem; }
+  .showcase-actions { width: 100%; }
+  .showcase-actions .btn { flex: 1 1 140px; justify-content: center; }
+  .product-grid { gap: var(--sp-2); }
+  .card-badge { top: var(--sp-2); left: var(--sp-2); font-size: .625rem; }
+  .card-name { font-size: .9rem; }
+  .card-price { font-size: .95rem; }
+  .card-add-to-cart { padding: 0 var(--sp-2) var(--sp-2); }
+}
