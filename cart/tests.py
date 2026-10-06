@@ -544,7 +544,13 @@ class CartViewTests(TestCase):
         resp = self.client.get(reverse("cart:remove"))
         self.assertEqual(resp.status_code, 405)
 
-    def test_pay_now_placeholder_returns_200(self):
+    @patch("cart.context_processors.get_cart_unit_count", return_value=0)
+    @patch("cart.views.get_cart", return_value={
+        "items": [], "subtotal": Decimal("0.00"), "total_units": 0, "has_purchasable_items": False,
+    })
+    @patch("cart.views.get_customer_profile", return_value={})
+    @patch("cart.views.get_customer_addresses", return_value=[])
+    def test_pay_now_placeholder_returns_200(self, mock_addresses, mock_profile, mock_cart, mock_cart_count):
         from customers.services import CUSTOMER_ID_SESSION_KEY
         # Must be authenticated to reach the placeholder page
         session = self.client.session
@@ -553,40 +559,114 @@ class CartViewTests(TestCase):
         resp = self.client.get(reverse("cart:pay_now"))
         self.assertEqual(resp.status_code, 200)
 
-    def test_pay_now_shows_test_mode_language(self):
+    @patch("cart.context_processors.get_cart_unit_count", return_value=0)
+    @patch("cart.views.get_cart", return_value={
+        "items": [], "subtotal": Decimal("0.00"), "total_units": 0, "has_purchasable_items": False,
+    })
+    @patch("cart.views.get_customer_profile", return_value={})
+    @patch("cart.views.get_customer_addresses", return_value=[])
+    def test_pay_now_shows_payhere_language(self, mock_addresses, mock_profile, mock_cart, mock_cart_count):
         from customers.services import CUSTOMER_ID_SESSION_KEY
         session = self.client.session
         session[CUSTOMER_ID_SESSION_KEY] = "cccccccc-0000-0000-0000-000000000001"
         session.save()
         resp = self.client.get(reverse("cart:pay_now"))
-        self.assertContains(resp, "Stripe test checkout")
+        self.assertContains(resp, "cart is empty")
+        self.assertContains(resp, "PayHere")
 
-    @override_settings(STRIPE_SECRET_KEY="sk_test_example")
-    @patch("cart.views.create_checkout_session", return_value="https://checkout.stripe.test/session")
-    def test_pay_now_post_redirects_to_hosted_checkout(self, mock_checkout):
+    @patch("cart.views.get_customer_addresses", return_value=[])
+    @patch("cart.views.get_customer_profile", return_value={
+        "first_name": "Ada", "last_name": "Lovelace", "email": "ada@example.com", "phone_number": "0770000000",
+    })
+    @patch("cart.context_processors.get_cart_unit_count", return_value=0)
+    @patch("cart.views.get_cart", return_value={
+        "items": [], "subtotal": Decimal("0.00"), "total_units": 0, "has_purchasable_items": True,
+    })
+    def test_checkout_collects_contact_details_without_card_data(self, mock_cart, mock_cart_count, mock_profile, mock_addresses):
         from customers.services import CUSTOMER_ID_SESSION_KEY
         session = self.client.session
         session[CUSTOMER_ID_SESSION_KEY] = "cccccccc-0000-0000-0000-000000000001"
         session.save()
-        resp = self.client.post(reverse("cart:pay_now"))
-        self.assertEqual(resp.status_code, 302)
-        self.assertEqual(resp["Location"], "https://checkout.stripe.test/session")
-        mock_checkout.assert_called_once()
+        response = self.client.get(reverse("cart:pay_now"))
 
-    @patch("cart.views.create_simulated_order", return_value={"order_number": "RS-DEMO-1", "total": Decimal("1250.00")})
-    def test_pay_now_can_start_simulated_order_without_stripe(self, mock_simulated):
+        self.assertContains(response, 'name="first_name"')
+        self.assertContains(response, 'name="last_name"')
+        self.assertContains(response, 'name="email"')
+        self.assertContains(response, 'name="phone_number"')
+        self.assertNotContains(response, 'name="card_number"')
+        self.assertNotContains(response, 'name="cvc"')
+
+    @override_settings(PAYHERE_MERCHANT_ID="1210000", PAYHERE_MERCHANT_SECRET="sandbox-secret")
+    @patch("cart.views.get_customer_addresses", return_value=[{
+        "address_id": "address-1", "is_default": True, "recipient_name": "Test Customer",
+        "phone_number": "0770000000", "address_line_1": "1 Main Road", "city": "Colombo", "district": "Colombo",
+    }])
+    @patch("cart.views.get_customer_profile", return_value={
+        "first_name": "Test", "last_name": "Customer", "email": "test@example.com", "phone_number": "0770000000",
+    })
+    @patch("cart.context_processors.get_cart_unit_count", return_value=0)
+    @patch("cart.views.get_cart", return_value={
+        "items": [], "subtotal": Decimal("0.00"), "total_units": 0, "has_purchasable_items": False,
+    })
+    @patch("cart.views.create_payhere_checkout", return_value={
+        "action": "https://sandbox.payhere.lk/pay/checkout", "merchant_id": "1210000",
+        "order_id": "order-1", "items": "Rathna Stores order RS-1",
+    })
+    def test_pay_now_post_renders_signed_payhere_form(self, mock_checkout, mock_cart, mock_cart_count, mock_profile, mock_addresses):
         from customers.services import CUSTOMER_ID_SESSION_KEY
         session = self.client.session
         session[CUSTOMER_ID_SESSION_KEY] = "cccccccc-0000-0000-0000-000000000001"
         session.save()
-        resp = self.client.post(reverse("cart:pay_now"), {"delivery_type": "PICKUP", "simulate_order": "1"})
+        resp = self.client.post(reverse("cart:pay_now"), {
+            "delivery_type": "PICKUP",
+            "first_name": "Ada",
+            "last_name": "Lovelace",
+            "email": "ada@example.com",
+            "phone_number": "0771112222",
+        })
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "RS-DEMO-1")
-        self.assertContains(resp, "No real payment was taken")
-        mock_simulated.assert_called_once()
+        self.assertContains(resp, "sandbox.payhere.lk/pay/checkout")
+        self.assertContains(resp, "Rathna Stores order RS-1")
+        mock_checkout.assert_called_once()
+        self.assertEqual(mock_checkout.call_args.kwargs["customer"]["email"], "ada@example.com")
+        self.assertEqual(mock_checkout.call_args.kwargs["customer"]["phone_number"], "0771112222")
+
+    @override_settings(PAYHERE_MERCHANT_ID="1210000", PAYHERE_MERCHANT_SECRET="sandbox-secret")
+    @patch("cart.views.get_customer_addresses", return_value=[])
+    @patch("cart.views.get_customer_profile", return_value={})
+    @patch("cart.context_processors.get_cart_unit_count", return_value=0)
+    @patch("cart.views.get_cart", return_value={
+        "items": [], "subtotal": Decimal("0.00"), "total_units": 0, "has_purchasable_items": True,
+    })
+    @patch("cart.views.create_payhere_checkout", return_value={
+        "action": "https://sandbox.payhere.lk/pay/checkout", "merchant_id": "1210000",
+    })
+    def test_pickup_checkout_uses_contact_and_billing_details_from_form(
+        self, mock_checkout, mock_cart, mock_cart_count, mock_profile, mock_addresses
+    ):
+        from customers.services import CUSTOMER_ID_SESSION_KEY
+        session = self.client.session
+        session[CUSTOMER_ID_SESSION_KEY] = "cccccccc-0000-0000-0000-000000000001"
+        session.save()
+        self.client.post(reverse("cart:pay_now"), {
+            "delivery_type": "PICKUP",
+            "first_name": "Ada",
+            "last_name": "Lovelace",
+            "email": "ada@example.com",
+            "phone_number": "0771112222",
+            "recipient_name": "Ada Lovelace",
+            "address_line_1": "1 Main Road",
+            "city": "Colombo",
+        })
+
+        checkout = mock_checkout.call_args.kwargs
+        self.assertEqual(checkout["customer"]["email"], "ada@example.com")
+        self.assertEqual(checkout["billing_address"]["address_line_1"], "1 Main Road")
+        self.assertEqual(checkout["billing_address"]["city"], "Colombo")
+        self.assertEqual(checkout["delivery_type"], "PICKUP")
 
     def test_pay_now_does_not_accept_browser_payment_data(self):
-        """Checkout is delegated to Stripe-hosted Checkout, not Django forms."""
+        """Checkout is delegated to PayHere; the browser never supplies a payment result."""
         import inspect
         import cart.views as cv
         source = inspect.getsource(cv)
@@ -595,16 +675,14 @@ class CartViewTests(TestCase):
         self.assertNotIn("charge", source)
         self.assertNotIn("gateway", source)
 
-    @patch("cart.views.handle_webhook")
-    def test_stripe_webhook_returns_200_after_service_processing(self, mock_webhook):
+    @patch("cart.views.handle_notification")
+    def test_payhere_notification_returns_200_after_service_processing(self, mock_notification):
         response = self.client.post(
-            "/payments/stripe/webhook/",
-            data=b"{}",
-            content_type="application/json",
-            HTTP_STRIPE_SIGNATURE="signed",
+            "/payments/payhere/notify/",
+            {"order_id": "order-1", "status_code": "2"},
         )
         self.assertEqual(response.status_code, 200)
-        mock_webhook.assert_called_once_with(b"{}", "signed")
+        mock_notification.assert_called_once_with({"order_id": "order-1", "status_code": "2"})
 
     @patch("cart.views.get_cart", side_effect=Exception("Supabase down"))
     def test_cart_page_handles_service_failure(self, mock_cart):

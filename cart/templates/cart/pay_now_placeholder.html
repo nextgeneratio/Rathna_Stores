@@ -1,127 +1,282 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Complete payment — Rathna Stores{% endblock %}
+{% block title %}Checkout — Rathna Stores{% endblock %}
+{% block meta_description %}Review your order and securely continue to PayHere.{% endblock %}
 
 {% block content %}
-<section style="padding:5rem 0;flex:1;">
-  <div class="container" style="max-width:580px;text-align:center;">
-    <div style="font-size:4rem;margin-bottom:1.5rem;" aria-hidden="true">💳</div>
+<section class="checkout-section">
+  <div class="container">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="{% url 'cart:cart' %}">Your cart</a>
+      <span class="breadcrumb-sep" aria-hidden="true">›</span>
+      <span aria-current="page">Checkout</span>
+    </nav>
 
-    <h1 style="font-size:2rem;margin-bottom:1rem;">Complete payment</h1>
+    <header class="checkout-heading">
+      <p class="checkout-kicker">Almost there</p>
+      <h1>Checkout</h1>
+      <p>Confirm your details and order. PayHere securely collects your payment details on the next step.</p>
+    </header>
 
-    <p style="color:var(--text-muted);font-size:1.05rem;line-height:1.75;margin-bottom:2rem;">
-      Press Pay now to complete this simulated payment and place your order immediately.
-    </p>
-
-    <div class="alert alert-info" role="note" style="text-align:left;margin-bottom:2rem;">
-      This is a simulated payment. Your order will be marked paid and confirmed immediately.
-    </div>
-
-    <form method="post" action="{% url 'cart:pay_now' %}" style="text-align:left;margin:0 auto 1.5rem;max-width:480px;">
+    {% if cart.has_purchasable_items %}
+    <form method="post" action="{% url 'cart:pay_now' %}" class="checkout-layout" id="checkout-form">
       {% csrf_token %}
-      <fieldset style="border:0;padding:0;margin:0 0 1.25rem;">
-        <legend style="font-weight:700;margin-bottom:.75rem;">How would you like to receive your order?</legend>
-        <label style="display:block;margin:.6rem 0;"><input type="radio" name="delivery_type" value="PICKUP" required> Pick up from Rathna Stores</label>
-        <label style="display:block;margin:.6rem 0;"><input type="radio" name="delivery_type" value="DELIVERY"> Delivery within Colombo district</label>
-      </fieldset>
-      <label for="checkout-address" style="display:block;font-weight:700;margin-bottom:.5rem;">Delivery address</label>
-      <select id="checkout-address" name="address_id" style="width:100%;padding:.75rem;border:var(--border);border-radius:6px;margin-bottom:.5rem;">
-        <option value="">Choose a saved Colombo address for delivery</option>
-        {% for address in delivery_options %}
-        <option value="{{ address.address_id }}" data-fee="{{ address.delivery_fee|default:'' }}" data-distance="{{ address.distance_km|default:'' }}">{{ address.recipient_name }} — {{ address.address_line_1 }}, {{ address.city }}, {{ address.district|default:"District not set" }}{% if address.delivery_fee %} (LKR {{ address.delivery_fee }}){% else %} (location required){% endif %}</option>
-        {% endfor %}
-      </select>
-      <div class="form-card" style="margin:1rem 0;text-align:left;padding:1rem;">
-        <p style="font-weight:700;margin-bottom:.75rem;">Or enter a new Colombo address</p>
-        <input name="recipient_name" placeholder="Recipient name" style="width:100%;padding:.65rem;margin-bottom:.5rem;" />
-        <input name="phone_number" placeholder="Phone number" style="width:100%;padding:.65rem;margin-bottom:.5rem;" />
-        <input name="address_line_1" placeholder="Address line 1" style="width:100%;padding:.65rem;margin-bottom:.5rem;" />
-        <input name="address_line_2" placeholder="Address line 2 (optional)" style="width:100%;padding:.65rem;margin-bottom:.5rem;" />
-        <input name="city" placeholder="City or sub-area" list="colombo-cities" style="width:100%;padding:.65rem;margin-bottom:.5rem;" />
-        <datalist id="colombo-cities"></datalist>
-        <input name="district" value="Colombo" placeholder="District" style="width:100%;padding:.65rem;margin-bottom:.5rem;" />
-        <input name="postal_code" placeholder="Postal code" style="width:100%;padding:.65rem;margin-bottom:.5rem;" />
-        <input type="hidden" name="latitude" id="checkout-latitude" />
-        <input type="hidden" name="longitude" id="checkout-longitude" />
-        <button type="button" id="checkout-location" class="btn btn-ghost btn-sm">Use my current location</button>
-        <span id="checkout-location-status" class="form-hint" aria-live="polite"></span>
+      <div class="checkout-main">
+        <section class="checkout-card" aria-labelledby="contact-heading">
+          <div class="checkout-card-heading">
+            <span class="checkout-step" aria-hidden="true">1</span>
+            <div>
+              <h2 id="contact-heading">Contact details</h2>
+              <p>We’ll use these details for your payment and order updates.</p>
+            </div>
+          </div>
+          <div class="checkout-form-grid">
+            <div class="form-group">
+              <label class="form-label" for="checkout-first-name">First name <span class="required" aria-hidden="true">*</span></label>
+              <input class="form-control" type="text" id="checkout-first-name" name="first_name" value="{{ checkout_form.first_name }}" autocomplete="given-name" maxlength="100" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="checkout-last-name">Last name <span class="required" aria-hidden="true">*</span></label>
+              <input class="form-control" type="text" id="checkout-last-name" name="last_name" value="{{ checkout_form.last_name }}" autocomplete="family-name" maxlength="100" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="checkout-email">Email address <span class="required" aria-hidden="true">*</span></label>
+              <input class="form-control" type="email" id="checkout-email" name="email" value="{{ checkout_form.email }}" autocomplete="email" maxlength="254" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="checkout-phone">Phone number <span class="required" aria-hidden="true">*</span></label>
+              <input class="form-control" type="tel" id="checkout-phone" name="phone_number" value="{{ checkout_form.phone_number }}" autocomplete="tel" maxlength="20" required>
+            </div>
+          </div>
+        </section>
+
+        <section class="checkout-card" aria-labelledby="fulfilment-heading">
+          <div class="checkout-card-heading">
+            <span class="checkout-step" aria-hidden="true">2</span>
+            <div>
+              <h2 id="fulfilment-heading">Delivery or pickup</h2>
+              <p>Choose how you’d like to receive your order.</p>
+            </div>
+          </div>
+          <fieldset class="checkout-fulfilment">
+            <legend class="visually-hidden">Choose pickup or delivery</legend>
+            <label class="checkout-choice">
+              <input type="radio" name="delivery_type" value="PICKUP" {% if checkout_form.delivery_type == "PICKUP" %}checked{% endif %} required>
+              <span class="checkout-choice-copy"><strong>Store pickup</strong><small>Pick up from Rathna Stores</small></span>
+            </label>
+            <label class="checkout-choice">
+              <input type="radio" name="delivery_type" value="DELIVERY" {% if checkout_form.delivery_type == "DELIVERY" %}checked{% endif %}>
+              <span class="checkout-choice-copy"><strong>Delivery</strong><small>Currently available in Colombo district</small></span>
+            </label>
+          </fieldset>
+
+          <div class="form-group checkout-saved-address">
+            <label class="form-label" for="checkout-address">Saved address <span class="form-hint">(optional)</span></label>
+            <select id="checkout-address" name="address_id" class="form-control">
+              <option value="">Enter an address below</option>
+              {% for address in delivery_options %}
+              <option value="{{ address.address_id }}"
+                      data-fee="{{ address.delivery_fee|default:'' }}"
+                      data-distance="{{ address.distance_km|default:'' }}"
+                      {% if checkout_form.address_id == address.address_id|stringformat:"s" %}selected{% endif %}>
+                {{ address.recipient_name }} — {{ address.address_line_1 }}, {{ address.city }}, {{ address.district|default:"District not set" }}{% if address.delivery_fee %} · LKR {{ address.delivery_fee }} delivery{% elif address.latitude and address.longitude %} · fee calculated at checkout{% else %} · location required{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="checkout-address-fields">
+            <p class="checkout-subheading">Address for PayHere and delivery</p>
+            <div class="checkout-form-grid">
+              <div class="form-group">
+                <label class="form-label" for="checkout-recipient">Recipient name</label>
+                <input class="form-control" type="text" id="checkout-recipient" name="recipient_name" value="{{ checkout_form.recipient_name }}" autocomplete="name" maxlength="100">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="checkout-address-phone">Address phone</label>
+                <input class="form-control" type="tel" id="checkout-address-phone" name="address_phone_number" value="{{ checkout_form.address_phone_number }}" autocomplete="tel" maxlength="20">
+              </div>
+              <div class="form-group checkout-form-grid-full">
+                <label class="form-label" for="checkout-address-line-1">Address line 1 <span class="required" aria-hidden="true">*</span></label>
+                <input class="form-control" type="text" id="checkout-address-line-1" name="address_line_1" value="{{ checkout_form.address_line_1 }}" autocomplete="address-line1" maxlength="255">
+              </div>
+              <div class="form-group checkout-form-grid-full">
+                <label class="form-label" for="checkout-address-line-2">Address line 2</label>
+                <input class="form-control" type="text" id="checkout-address-line-2" name="address_line_2" value="{{ checkout_form.address_line_2 }}" autocomplete="address-line2" maxlength="255">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="checkout-city">City <span class="required" aria-hidden="true">*</span></label>
+                <input class="form-control" type="text" id="checkout-city" name="city" value="{{ checkout_form.city }}" autocomplete="address-level2" list="colombo-cities" maxlength="100">
+                <datalist id="colombo-cities"></datalist>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="checkout-district">District</label>
+                <input class="form-control" type="text" id="checkout-district" name="district" value="{{ checkout_form.district }}" maxlength="100">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="checkout-postal-code">Postal code</label>
+                <input class="form-control" type="text" id="checkout-postal-code" name="postal_code" value="{{ checkout_form.postal_code }}" autocomplete="postal-code" maxlength="20">
+              </div>
+            </div>
+            <input type="hidden" name="latitude" id="checkout-latitude" value="{{ checkout_form.latitude }}">
+            <input type="hidden" name="longitude" id="checkout-longitude" value="{{ checkout_form.longitude }}">
+            <div class="checkout-location-row">
+              <button type="button" id="checkout-location" class="btn btn-ghost btn-sm">Use my current location</button>
+              <span id="checkout-location-status" class="form-hint" aria-live="polite"></span>
+            </div>
+            <p class="form-hint checkout-address-note">A billing/contact address is required by PayHere for pickup orders. Delivery is available only within Colombo district and requires your location to calculate the fee.</p>
+          </div>
+        </section>
+
+        <aside class="checkout-secure-note" role="note">
+          <span class="checkout-lock" aria-hidden="true">✓</span>
+          <p><strong>Secure payment with PayHere</strong><br>Card and other payment details are entered on PayHere’s secure checkout page. Rathna Stores never collects or stores your card number or CVC.</p>
+        </aside>
       </div>
-      <p class="form-hint" style="margin-bottom:1rem;">Delivery is available only when the selected saved address has district Colombo. Pickup does not require an address.</p>
-      <div class="alert alert-info" role="status" style="margin-bottom:1rem;">
-        <strong>Estimated total: LKR <span id="checkout-total">{{ cart_subtotal }}</span></strong>
-        <span id="delivery-summary">Pickup has no delivery fee.</span>
-      </div>
-      <button type="submit" class="btn btn-secondary" style="width:100%;">Pay now</button>
+
+      <aside class="checkout-summary" aria-label="Order summary">
+        <div class="checkout-summary-card">
+          <h2>Your order</h2>
+          <div class="checkout-order-items">
+            {% for item in cart.items %}
+            {% if item.is_available %}
+            <div class="checkout-order-item">
+              <div class="checkout-order-image">
+                {% if item.primary_image %}
+                <img src="{{ item.primary_image.image_url }}" alt="" loading="lazy">
+                {% else %}
+                <img src="{% static 'images/cakes/default-cake.jpg' %}" alt="" loading="lazy">
+                {% endif %}
+                <span>{{ item.quantity }}</span>
+              </div>
+              <div class="checkout-order-name">
+                <strong>{{ item.product.name }}</strong>
+                <small>{{ item.unit_price_display }} each</small>
+              </div>
+              <strong class="checkout-order-price">{{ item.line_total_display }}</strong>
+            </div>
+            {% endif %}
+            {% endfor %}
+          </div>
+          <div class="checkout-summary-lines">
+            <div><span>Subtotal</span><strong>LKR {{ cart_subtotal }}</strong></div>
+            <div><span>Delivery</span><span id="delivery-summary">Choose delivery to calculate</span></div>
+            <div class="checkout-total"><span>Total</span><strong>LKR <span id="checkout-total">{{ cart_subtotal }}</span></strong></div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg checkout-submit">Continue to PayHere <span aria-hidden="true">→</span></button>
+          <p class="checkout-back-link"><a href="{% url 'cart:cart' %}">← Return to your cart</a></p>
+          <p class="checkout-summary-footnote">Your order is confirmed after PayHere sends a verified payment notification.</p>
+        </div>
+      </aside>
     </form>
-    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
-      <a href="{% url 'cart:cart' %}" class="btn btn-primary">← Back to cart</a>
-      <a href="{% url 'customers:address_list' %}" class="btn btn-ghost">Manage saved addresses</a>
+    {% else %}
+    <div class="checkout-empty">
+      <h2>Your cart is empty</h2>
+      <p>Add available cakes to your cart before continuing to PayHere.</p>
+      <a class="btn btn-primary" href="{% url 'cakes:catalogue' %}">Browse cakes</a>
     </div>
+    {% endif %}
   </div>
 </section>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  const locationButton = document.getElementById('checkout-location');
-  const locationStatus = document.getElementById('checkout-location-status');
-  const subtotal = Number('{{ cart_subtotal }}');
-  const deliveryTypeInputs = document.querySelectorAll('input[name="delivery_type"]');
-  const addressSelect = document.getElementById('checkout-address');
-  const totalElement = document.getElementById('checkout-total');
-  const deliverySummary = document.getElementById('delivery-summary');
-  const storeLatitude = Number('{{ store_latitude }}');
-  const storeLongitude = Number('{{ store_longitude }}');
-  const baseFee = Number('{{ delivery_base_fee }}');
-  const ratePerKm = Number('{{ delivery_rate_per_km }}');
-  function updateCheckoutTotal() {
-    const delivery = document.querySelector('input[name="delivery_type"]:checked')?.value === 'DELIVERY';
-    let fee = 0;
-    let distance = '';
-    if (delivery) {
-      const option = addressSelect.options[addressSelect.selectedIndex];
-      fee = Number(option?.dataset.fee || 0);
-      distance = option?.dataset.distance || '';
-      const latitude = Number(document.getElementById('checkout-latitude').value);
-      const longitude = Number(document.getElementById('checkout-longitude').value);
-      if (!addressSelect.value && Number.isFinite(latitude) && Number.isFinite(longitude) && latitude && longitude) {
-        const radians = value => value * Math.PI / 180;
-        const a = Math.sin((radians(latitude - storeLatitude)) / 2) ** 2 + Math.cos(radians(storeLatitude)) * Math.cos(radians(latitude)) * Math.sin((radians(longitude - storeLongitude)) / 2) ** 2;
-        distance = (6371 * 2 * Math.asin(Math.sqrt(a))).toFixed(2);
-        fee = baseFee + Number(distance) * ratePerKm;
-      }
+  const checkoutForm = document.getElementById('checkout-form');
+  if (checkoutForm) {
+    const locationButton = document.getElementById('checkout-location');
+    const locationStatus = document.getElementById('checkout-location-status');
+    const subtotal = Number('{{ cart_subtotal|escapejs }}');
+    const deliveryTypeInputs = document.querySelectorAll('input[name="delivery_type"]');
+    const addressSelect = document.getElementById('checkout-address');
+    const addressLine = document.getElementById('checkout-address-line-1');
+    const cityInput = document.getElementById('checkout-city');
+    const districtInput = document.getElementById('checkout-district');
+    const totalElement = document.getElementById('checkout-total');
+    const deliverySummary = document.getElementById('delivery-summary');
+    const storeLatitude = Number('{{ store_latitude|escapejs }}');
+    const storeLongitude = Number('{{ store_longitude|escapejs }}');
+    const baseFee = Number('{{ delivery_base_fee|escapejs }}');
+    const ratePerKm = Number('{{ delivery_rate_per_km|escapejs }}');
+
+    function isDelivery() {
+      return document.querySelector('input[name="delivery_type"]:checked')?.value === 'DELIVERY';
     }
-    totalElement.textContent = (subtotal + fee).toFixed(2);
-    deliverySummary.textContent = delivery ? `Delivery: LKR ${fee.toFixed(2)}${distance ? ` (${distance} km)` : ' (location required)'}` : 'Pickup has no delivery fee.';
-  }
-  deliveryTypeInputs.forEach(input => input.addEventListener('change', updateCheckoutTotal));
-  addressSelect.addEventListener('change', updateCheckoutTotal);
-  if (locationButton) {
-    locationButton.addEventListener('click', () => {
-      if (!navigator.geolocation) {
-        locationStatus.textContent = 'Location sharing is not supported by this browser.';
-        return;
+
+    function updateCheckoutTotal() {
+      let fee = 0;
+      let distance = '';
+      if (isDelivery()) {
+        const option = addressSelect.options[addressSelect.selectedIndex];
+        fee = Number(option?.dataset.fee || 0);
+        distance = option?.dataset.distance || '';
+        const latitude = Number(document.getElementById('checkout-latitude').value);
+        const longitude = Number(document.getElementById('checkout-longitude').value);
+        if ((!addressSelect.value || !distance) && Number.isFinite(latitude) && Number.isFinite(longitude) && latitude && longitude) {
+          const radians = value => value * Math.PI / 180;
+          const a = Math.sin((radians(latitude - storeLatitude)) / 2) ** 2 + Math.cos(radians(storeLatitude)) * Math.cos(radians(latitude)) * Math.sin((radians(longitude - storeLongitude)) / 2) ** 2;
+          distance = (6371 * 2 * Math.asin(Math.sqrt(a))).toFixed(2);
+          fee = baseFee + Number(distance) * ratePerKm;
+        }
       }
-      locationStatus.textContent = 'Requesting your location...';
-      navigator.geolocation.getCurrentPosition((position) => {
-        document.getElementById('checkout-latitude').value = position.coords.latitude.toFixed(7);
-        document.getElementById('checkout-longitude').value = position.coords.longitude.toFixed(7);
-        locationStatus.textContent = 'Location captured for this address.';
-        updateCheckoutTotal();
-      }, () => { locationStatus.textContent = 'Location permission was not granted.'; });
+      totalElement.textContent = (subtotal + fee).toFixed(2);
+      deliverySummary.textContent = isDelivery()
+        ? `LKR ${fee.toFixed(2)}${distance ? ` (${distance} km)` : ' · location required'}`
+        : 'Pickup · free';
+    }
+
+    function updateAddressRequirements() {
+      const needsAddress = !addressSelect.value;
+      addressLine.required = needsAddress;
+      cityInput.required = needsAddress;
+      districtInput.required = isDelivery() && needsAddress;
+      updateCheckoutTotal();
+    }
+
+    deliveryTypeInputs.forEach(input => input.addEventListener('change', updateAddressRequirements));
+    addressSelect.addEventListener('change', updateAddressRequirements);
+    checkoutForm.addEventListener('submit', event => {
+      if (!isDelivery()) return;
+      const option = addressSelect.options[addressSelect.selectedIndex];
+      const latitude = document.getElementById('checkout-latitude').value;
+      const longitude = document.getElementById('checkout-longitude').value;
+      if ((!latitude || !longitude) && (!addressSelect.value || !option?.dataset.distance)) {
+        event.preventDefault();
+        locationStatus.textContent = 'Share your current location to calculate the delivery fee.';
+        locationButton.focus();
+      }
     });
-  }
-  fetch('{{ location_api_base_url }}/cities/byDistrict/5')
-    .then(response => response.ok ? response.json() : [])
-    .then(cities => {
-      const list = document.getElementById('colombo-cities');
-      (Array.isArray(cities) ? cities : []).forEach(city => {
-        const option = document.createElement('option');
-        option.value = city.name || city.city || city.sub_area || '';
-        if (option.value) list.appendChild(option);
+    if (locationButton) {
+      locationButton.addEventListener('click', () => {
+        if (!navigator.geolocation) {
+          locationStatus.textContent = 'Location sharing is not supported by this browser.';
+          return;
+        }
+        locationStatus.textContent = 'Requesting your location...';
+        navigator.geolocation.getCurrentPosition(position => {
+          document.getElementById('checkout-latitude').value = position.coords.latitude.toFixed(7);
+          document.getElementById('checkout-longitude').value = position.coords.longitude.toFixed(7);
+          locationStatus.textContent = 'Location captured for delivery pricing.';
+          updateCheckoutTotal();
+        }, () => {
+          locationStatus.textContent = 'Location permission was not granted.';
+        });
       });
-    })
-    .catch(() => {});
+    }
+    updateAddressRequirements();
+
+    fetch('{{ location_api_base_url|escapejs }}/cities/byDistrict/5')
+      .then(response => response.ok ? response.json() : [])
+      .then(cities => {
+        const list = document.getElementById('colombo-cities');
+        (Array.isArray(cities) ? cities : []).forEach(city => {
+          const option = document.createElement('option');
+          option.value = city.name || city.city || city.sub_area || '';
+          if (option.value) list.appendChild(option);
+        });
+      })
+      .catch(error => console.warn('Could not load Colombo city suggestions:', error));
+  }
 </script>
 {% endblock %}

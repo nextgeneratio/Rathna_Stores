@@ -614,9 +614,9 @@ def get_address_by_id(customer_id: str, address_id: str) -> Optional[dict]:
         )
         rows = resp.data or []
         return rows[0] if rows else None
-    except APIError as exc:
+    except Exception as exc:
         logger.error("get_address_by_id failed for %s/%s: %s", customer_id, address_id, exc)
-        return None
+        raise CustomerError("Could not load this address. Please try again.") from exc
 
 
 def _EDITABLE_ADDRESS_FIELDS():
@@ -660,7 +660,7 @@ def create_address(customer_id: str, data: dict) -> dict:
         return rows[0]
     except CustomerError:
         raise
-    except APIError as exc:
+    except Exception as exc:
         logger.error("create_address failed for %s: %s", customer_id, exc)
         raise CustomerError("Could not save address. Please try again.") from exc
 
@@ -704,7 +704,7 @@ def update_address(customer_id: str, address_id: str, data: dict) -> dict:
         return rows[0]
     except CustomerError:
         raise
-    except APIError as exc:
+    except Exception as exc:
         logger.error("update_address failed for %s/%s: %s", customer_id, address_id, exc)
         raise CustomerError("Could not update address. Please try again.") from exc
 
@@ -719,7 +719,7 @@ def delete_address(customer_id: str, address_id: str) -> None:
         client.table(ADDRESSES_TABLE).delete().eq(
             "address_id", address_id
         ).eq("customer_id", customer_id).execute()
-    except APIError as exc:
+    except Exception as exc:
         logger.error("delete_address failed for %s/%s: %s", customer_id, address_id, exc)
         raise CustomerError("Could not delete address. Please try again.") from exc
 
@@ -735,7 +735,7 @@ def set_default_address(customer_id: str, address_id: str) -> None:
         client.table(ADDRESSES_TABLE).update({"is_default": True}).eq(
             "address_id", address_id
         ).eq("customer_id", customer_id).execute()
-    except APIError as exc:
+    except Exception as exc:
         logger.error("set_default_address failed for %s/%s: %s", customer_id, address_id, exc)
         raise CustomerError("Could not set default address.") from exc
 

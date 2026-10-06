@@ -630,6 +630,15 @@ class ProfileImageTests(TestCase):
 class AddressOwnershipTests(TestCase):
 
     @patch("customers.services.get_supabase_client")
+    def test_get_address_converts_network_failure_to_customer_error(self, mock_get_client):
+        from httpx import ConnectTimeout
+        from customers.services import get_address_by_id
+
+        mock_get_client.return_value.table.return_value.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute.side_effect = ConnectTimeout("timed out")
+        with self.assertRaises(CustomerError):
+            get_address_by_id("cccc0000-0000-0000-0000-000000000001", "eeee0000-0000-0000-0000-000000000001")
+
+    @patch("customers.services.get_supabase_client")
     def test_get_address_returns_none_for_wrong_customer(self, mock_get_client):
         from customers.services import get_address_by_id
         # Returns empty data — address not found for this customer
@@ -769,14 +778,14 @@ class PayNowAuthGateTests(TestCase):
         session.save()
         resp = client.get(reverse("cart:pay_now"))
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "Stripe test checkout")
+        self.assertContains(resp, "Continue to PayHere")
 
     def test_paynow_uses_hosted_test_checkout_contract(self):
         """Verify browser requests cannot supply payment or stock mutations."""
         import inspect
         import cart.views as cv
         source = inspect.getsource(cv)
-        self.assertIn("create_checkout_session", source)
+        self.assertIn("create_payhere_checkout", source)
         self.assertNotIn("create_order", source)
         self.assertNotIn("create_payment", source)
         self.assertNotIn("request.POST.get(\"total", source)

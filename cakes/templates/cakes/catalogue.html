@@ -133,7 +133,11 @@
 
 @media (max-width: 768px) {
   .showcase-slide { grid-template-columns: 1fr; }
-  .showcase-image-wrap { display: none; }
+  .showcase-image-wrap {
+    display: block;
+    width: min(100%, 22rem);
+    margin: var(--sp-6) auto 0;
+  }
   .showcase { min-height: auto; }
 }
 </style>

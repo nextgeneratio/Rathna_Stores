@@ -376,7 +376,11 @@ def address_create(request):
 def address_edit(request, address_id):
     """GET: show edit form. POST: update existing address."""
     customer_id = get_authenticated_customer_id(request.session)
-    address = get_address_by_id(customer_id, str(address_id))
+    try:
+        address = get_address_by_id(customer_id, str(address_id))
+    except CustomerError as exc:
+        messages.error(request, str(exc))
+        return redirect("customers:address_list")
     if not address:
         raise Http404("Address not found.")
 

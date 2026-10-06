@@ -173,15 +173,14 @@
             <span class="cart-summary-amount">{{ cart.subtotal_display }}</span>
           </div>
 
-          <!-- PayNow placeholder -->
           {% if cart.has_purchasable_items %}
           <a href="{% url 'cart:pay_now' %}"
              class="btn btn-primary btn-lg cart-paynow-btn"
              aria-describedby="paynow-note">
-            PayNow
+            Proceed to checkout
           </a>
           <p class="cart-paynow-note" id="paynow-note" role="note">
-            Secure checkout coming soon. No payment will be processed.
+            Secure payments are processed by PayHere.
           </p>
           {% else %}
           <div class="cart-no-items-note" role="note">

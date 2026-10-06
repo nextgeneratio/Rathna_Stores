@@ -7,12 +7,12 @@
   <div class="container" style="max-width:580px;text-align:center;">
     {% if result == "success" %}
     <h1 style="font-size:2rem;margin-bottom:1rem;">Payment submitted for verification</h1>
-    <p style="color:var(--text-muted);line-height:1.75;">Stripe returned you to Rathna Stores. Your order is not confirmed until the signed Stripe webhook is received and verified.</p>
+    <p style="color:var(--text-muted);line-height:1.75;">{{ provider|default:"PayHere" }} returned you to Rathna Stores. Your order is not confirmed until its signed payment notification is received and verified.</p>
     {% else %}
     <h1 style="font-size:2rem;margin-bottom:1rem;">Checkout cancelled</h1>
     <p style="color:var(--text-muted);line-height:1.75;">No payment was confirmed. Your cart remains available for another attempt.</p>
     {% endif %}
-    <div class="alert alert-info" role="note" style="text-align:left;margin:2rem 0;">This is Stripe test mode. No real money is taken.</div>
+    {% if payhere_sandbox %}<div class="alert alert-info" role="note" style="text-align:left;margin:2rem 0;">This is PayHere sandbox mode. No real money is taken.</div>{% endif %}
     <a href="{% url 'cart:cart' %}" class="btn btn-primary">Return to cart</a>
   </div>
 </section>

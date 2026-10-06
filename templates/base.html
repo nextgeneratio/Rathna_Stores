@@ -7,7 +7,7 @@
   <meta name="description" content="{% block meta_description %}Rathna Stores — handcrafted cakes for every occasion.{% endblock %}" />
   <title>{% block title %}Rathna Stores{% endblock %}</title>
   {% load static %}
-  <link rel="stylesheet" href="{% static 'css/rathna.css' %}?v=chatbot-1" />
+  <link rel="stylesheet" href="{% static 'css/rathna.css' %}?v=payhere-checkout-1" />
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -296,6 +296,10 @@
     var chatHistory = [];
 
     function setChatOpen(open) {
+      if (open && navLinks && navLinks.classList.contains('open')) {
+        navLinks.classList.remove('open');
+        if (toggle) toggle.setAttribute('aria-expanded', 'false');
+      }
       chatPanel.hidden = !open;
       chatToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
       if (open) chatInput.focus();

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Redirecting to PayHere — Rathna Stores{% endblock %}
+
+{% block content %}
+<section style="padding:5rem 0;flex:1;">
+  <div class="container" style="max-width:580px;text-align:center;">
+    <div style="font-size:4rem;margin-bottom:1.5rem;" aria-hidden="true">🔒</div>
+    <h1 style="font-size:2rem;margin-bottom:1rem;">Taking you to PayHere</h1>
+    <p style="color:var(--text-muted);line-height:1.75;">Your order is reserved pending payment. Please do not refresh this page.</p>
+    <form id="payhere-checkout" method="post" action="{{ checkout.action }}">
+      {% for name, value in checkout_fields %}
+      {% if name != 'action' %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endif %}
+      {% endfor %}
+      <button class="btn btn-primary" type="submit">Continue to PayHere</button>
+    </form>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>document.getElementById('payhere-checkout').submit();</script>
+{% endblock %}

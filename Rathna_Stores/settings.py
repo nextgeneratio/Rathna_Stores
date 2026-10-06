@@ -140,12 +140,20 @@ CACHES = {
 }
 STAFF_DASHBOARD_CACHE_SECONDS = int(os.getenv('STAFF_DASHBOARD_CACHE_SECONDS', '20'))
 
-# Phase 4 payment settings remain disabled until the dedicated Stripe service
-# and verified webhook lifecycle are enabled in a test environment.
+# Legacy Stripe settings are retained for existing data/migrations. New browser
+# checkout uses PayHere and verifies its server notification before fulfilling.
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 STRIPE_TEST_MODE = os.getenv('STRIPE_TEST_MODE', 'True').lower() == 'true'
+PAYHERE_MERCHANT_ID = os.getenv('PAYHERE_MERCHANT_ID', '')
+PAYHERE_MERCHANT_SECRET = os.getenv('PAYHERE_MERCHANT_SECRET', '')
+PAYHERE_SANDBOX = _env_bool('PAYHERE_SANDBOX', True)
+# Set this to the externally reachable HTTPS callback URL in deployed
+# environments. The request host is used as a development fallback.
+PAYHERE_NOTIFY_URL = os.getenv('PAYHERE_NOTIFY_URL', '').strip()
+PAYHERE_RETURN_URL = os.getenv('PAYHERE_RETURN_URL', '').strip()
+PAYHERE_CANCEL_URL = os.getenv('PAYHERE_CANCEL_URL', '').strip()
 DELIVERY_FEE_LKR = Decimal(os.getenv('DELIVERY_FEE_LKR', '0.00'))
 DELIVERY_BASE_FEE_LKR = Decimal(os.getenv('DELIVERY_BASE_FEE_LKR', '150.00'))
 DELIVERY_RATE_PER_KM_LKR = Decimal(os.getenv('DELIVERY_RATE_PER_KM_LKR', '80.00'))
