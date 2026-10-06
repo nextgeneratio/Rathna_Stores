@@ -32,7 +32,9 @@ def _env_bool(name: str, default: bool = False) -> bool:
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-DEBUG = _env_bool('DJANGO_DEBUG', False)
+# Local runserver should work without a production secret. Deployments should
+# set DJANGO_DEBUG=False and provide DJANGO_SECRET_KEY explicitly.
+DEBUG = _env_bool('DJANGO_DEBUG', True)
 SECRET_KEY = str(os.getenv('DJANGO_SECRET_KEY', '')).strip()
 if not SECRET_KEY:
     if DEBUG:
