@@ -282,6 +282,9 @@ class CatalogueViewTests(TestCase):
 
         response = self.client.get(reverse("cakes:catalogue"))
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Find your kind of cake")
+        self.assertContains(response, "Shop by cake collection")
+        self.assertContains(response, "Choco Fudge")
 
     @patch("cakes.views.get_active_categories", return_value=[])
     @patch("cakes.views.get_catalogue_products", return_value=[])

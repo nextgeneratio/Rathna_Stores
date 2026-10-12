@@ -15,26 +15,17 @@
 
 {% block extra_head %}
 <style>
-/* ── Showcase hero: layout and transitions ────────────────────── */
-.showcase {
-  position: relative;
-  overflow: hidden;
-  background: var(--cocoa);
-  min-height: 480px;
-}
-.showcase-slides {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
+/* Showcase-specific layout and transitions. */
+.showcase { position: relative; overflow: hidden; }
+.showcase-slides { position: relative; width: 100%; height: 100%; }
 .showcase-slide {
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
   align-items: center;
-  gap: var(--sp-12);
-  padding: var(--sp-16) var(--sp-6);
+  gap: clamp(2rem, 6vw, 6rem);
+  padding: clamp(3.5rem, 7vw, 6.5rem) var(--sp-6) clamp(5rem, 8vw, 7rem);
   max-width: var(--max-w);
   margin-inline: auto;
   opacity: 0;
@@ -54,24 +45,26 @@
 .showcase-text { position: relative; z-index: 1; }
 .showcase-eyebrow {
   display: inline-block;
-  color: var(--gold);
-  font-size: .875rem;
-  font-weight: 600;
-  letter-spacing: .12em;
+  color: #e2c47e;
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .2em;
   text-transform: uppercase;
-  margin-bottom: var(--sp-3);
+  margin-bottom: var(--sp-5);
 }
 .showcase h1 {
-  font-size: clamp(2rem, 4vw, 3.25rem);
-  color: var(--cream);
-  line-height: 1.15;
-  margin-bottom: var(--sp-3);
+  max-width: 12ch;
+  font-size: clamp(2.6rem, 5.2vw, 5rem);
+  color: #fffaf2;
+  line-height: 1.04;
+  letter-spacing: -.035em;
+  margin-bottom: var(--sp-4);
 }
 .showcase-price {
-  font-size: 1.4rem;
-  color: var(--gold);
+  font-size: 1.2rem;
+  color: #e2c47e;
   font-weight: 700;
-  margin-bottom: var(--sp-5);
+  margin-bottom: var(--sp-6);
 }
 .showcase-price-original {
   font-size: .9rem;
@@ -81,13 +74,18 @@
   font-weight: 400;
 }
 .showcase-actions { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+.showcase-actions .btn-primary { background: #d7ad56; border-color: #d7ad56; color: #27180e; }
+.showcase-actions .btn-primary:hover { background: #e7c474; border-color: #e7c474; color: #27180e; }
+.showcase-actions .btn-secondary { border-color: rgba(255,255,255,.42); color: #fffaf2; }
+.showcase-actions .btn-secondary:hover { background: rgba(255,255,255,.12); }
 
 .showcase-image-wrap {
-  border-radius: var(--card-radius);
+  position: relative;
+  border-radius: 18px;
   overflow: hidden;
-  aspect-ratio: 4/3;
-  background: rgba(255,255,255,.06);
-  box-shadow: 0 12px 40px rgba(0,0,0,.35);
+  aspect-ratio: 1.16;
+  background: #503321;
+  box-shadow: 0 28px 80px rgba(0,0,0,.34);
 }
 .showcase-image-wrap img {
   width: 100%;
@@ -95,50 +93,32 @@
   object-fit: cover;
   display: block;
 }
-
-/* Controls */
 .showcase-controls {
-  position: absolute;
-  bottom: var(--sp-5);
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  z-index: 10;
+  bottom: 2rem;
+  left: max(1.5rem, calc((100vw - var(--max-w)) / 2 + 1.5rem));
+  transform: none;
+  gap: .65rem;
 }
-.showcase-dots {
-  display: flex;
-  gap: var(--sp-2);
-  align-items: center;
-}
-.showcase-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.35);
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: background .18s, transform .18s;
-}
-.showcase-dot.is-active {
-  background: var(--gold);
-  transform: scale(1.3);
-}
-.showcase-dot:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.showcase-dot { width: 24px; height: 4px; border-radius: 99px; }
+.showcase-dot.is-active { transform: none; width: 40px; }
 
-/* Live region for slide announcements */
-.showcase-live { position: absolute; width: 1px; height: 1px; overflow: hidden;
-  clip: rect(0,0,0,0); white-space: nowrap; }
+.showcase-dot:focus-visible { outline: 2px solid #e2c47e; outline-offset: 4px; }
+.showcase-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
 
 @media (max-width: 768px) {
-  .showcase-slide { grid-template-columns: 1fr; }
+  .showcase-slide { grid-template-columns: 1fr; gap: 0; padding: 3.5rem var(--sp-6) 5rem; }
+  .showcase h1 { max-width: 14ch; }
   .showcase-image-wrap {
-    display: block;
-    width: min(100%, 22rem);
-    margin: var(--sp-6) auto 0;
+    width: min(100%, 34rem);
+    margin: var(--sp-8) auto 0;
+    aspect-ratio: 1.35;
   }
-  .showcase { min-height: auto; }
+  .showcase-controls { left: var(--sp-6); bottom: 1.5rem; }
+}
+@media (max-width: 480px) {
+  .showcase-slide { padding: 2.75rem var(--sp-5) 4.5rem; }
+  .showcase h1 { font-size: clamp(2.35rem, 11vw, 3.2rem); }
+  .showcase-image-wrap { aspect-ratio: 1.1; }
 }
 </style>
 {% endblock %}
@@ -167,7 +147,7 @@
            aria-roledescription="slide">
 
         <div class="showcase-text">
-          <span class="showcase-eyebrow">Handcrafted with love</span>
+          <span class="showcase-eyebrow">Fresh from our bakery · Featured cake</span>
           <h1>{{ product.name }}</h1>
           <div class="showcase-price">
             {{ product.effective_price_display }}
@@ -226,10 +206,10 @@
     <div class="showcase-slide is-active"
          role="group" aria-label="Welcome to Rathna Stores">
       <div class="showcase-text">
-        <span class="showcase-eyebrow">Handcrafted with love</span>
+        <span class="showcase-eyebrow">Made fresh, shared with love</span>
         <h1>Cakes that make<br>moments unforgettable</h1>
         <div class="showcase-actions">
-          <a href="#shop" class="btn btn-primary btn-lg">Shop all cakes</a>
+          <a href="#shop" class="btn btn-primary btn-lg">          Explore the collection cakes</a>
         </div>
       </div>
       <div class="showcase-image-wrap">
@@ -248,20 +228,42 @@
 <!-- ══════════════════════════════════════════════════════════
      CATALOGUE
      ══════════════════════════════════════════════════════════ -->
+{% if not has_filters and categories %}
+<nav class="collection-strip" aria-label="Shop by cake collection">
+  <div class="container collection-strip-inner">
+    <span class="collection-strip-label">Find your favourite</span>
+    <div class="collection-strip-links">
+      {% for cat in categories %}
+      <a href="?category={{ cat.category_id }}">{{ cat.name }} <span aria-hidden="true">↗</span></a>
+      {% endfor %}
+      <a href="#shop">All cakes <span aria-hidden="true">↗</span></a>
+    </div>
+  </div>
+</nav>
+{% endif %}
+
 <section class="catalogue-section" id="shop" aria-label="Cake catalogue">
   <div class="container">
     {% if not has_filters %}
-    <div class="section-heading">
-      <h2>Choose your cake</h2>
-      <p>Every cake is baked fresh to order using the finest ingredients.</p>
+    <div class="catalogue-intro">
+      <div>
+        <span class="catalogue-kicker">A little something wonderful</span>
+        <h2>Find your kind of cake</h2>
+        <p>Small-batch bakes, made fresh and ready for your next celebration.</p>
+      </div>
+      <a class="catalogue-view-all" href="#shop">Explore all {{ product_count }} cakes <span aria-hidden="true">↓</span></a>
     </div>
     {% else %}
-    <div class="section-heading">
+    <div class="catalogue-intro catalogue-intro--filtered">
+      <div>
+      <span class="catalogue-kicker">Our cake collection</span>
       <h2>
         {% if active_category %}{{ active_category.name }}
         {% elif search %}Results for "{{ search }}"
         {% else %}All Cakes{% endif %}
       </h2>
+      <p>Find a freshly baked favourite for your next occasion.</p>
+      </div>
     </div>
     {% endif %}
 

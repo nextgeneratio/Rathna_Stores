@@ -22,6 +22,7 @@ from .stripe_services import (
 
 
 MANUAL_PAYMENT_METHODS = {"BANK_TRANSFER", "CASH_ON_DELIVERY"}
+PAYMENT_METHODS_REQUIRING_MANUAL_VERIFICATION = {"BANK_TRANSFER"}
 
 
 def _refresh_customer_spend(client, customer_id: str) -> None:
@@ -113,7 +114,9 @@ def confirm_offline_payment(order_id: str) -> dict:
 
     payment_rows = client.table(PAYMENTS_TABLE).select(
         "payment_id,payment_status"
-    ).eq("order_id", order_id).eq("payment_status", "PENDING").limit(1).execute().data or []
+    ).eq("order_id", order_id).eq("payment_status", "PENDING").in_(
+        "payment_method", sorted(PAYMENT_METHODS_REQUIRING_MANUAL_VERIFICATION)
+    ).limit(1).execute().data or []
     if not payment_rows:
         raise CheckoutError("No pending payment was found for this order.")
 
@@ -143,11 +146,13 @@ def confirm_offline_payment(order_id: str) -> dict:
 
 
 def get_pending_offline_payments() -> list[dict[str, Any]]:
-    """Return pending manual payments with their related customer/order data."""
+    """Return pending bank-transfer payments awaiting staff receipt verification."""
     client = get_supabase_client()
     payments = client.table(PAYMENTS_TABLE).select(
         "payment_id,order_id,payment_reference,amount,payment_method,created_at"
-    ).eq("payment_status", "PENDING").order("created_at", desc=True).execute().data or []
+    ).eq("payment_status", "PENDING").in_(
+        "payment_method", sorted(PAYMENT_METHODS_REQUIRING_MANUAL_VERIFICATION)
+    ).order("created_at", desc=True).execute().data or []
     for payment in payments:
         orders = client.table(ORDERS_TABLE).select(
             "order_number,customer_id,total_amount,delivery_type,delivery_city,delivery_district"

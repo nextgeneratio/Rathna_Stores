@@ -139,7 +139,6 @@ def customer_login(request):
         # Merge guest cart then rotate session
         _perform_cart_merge(request)
         request.session.cycle_key()
-        messages.success(request, f"Welcome back, {customer['first_name']}!")
         return redirect(next_url or "customers:profile")
 
     return render(request, "customers/login.html", {

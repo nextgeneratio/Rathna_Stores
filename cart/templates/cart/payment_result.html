@@ -6,8 +6,8 @@
 <section style="padding:5rem 0;flex:1;">
   <div class="container" style="max-width:580px;text-align:center;">
     {% if result == "success" %}
-    <h1 style="font-size:2rem;margin-bottom:1rem;">Payment submitted for verification</h1>
-    <p style="color:var(--text-muted);line-height:1.75;">{{ provider|default:"PayHere" }} returned you to Rathna Stores. Your order is not confirmed until its signed payment notification is received and verified.</p>
+    <h1 style="font-size:2rem;margin-bottom:1rem;">Payment received</h1>
+    <p style="color:var(--text-muted);line-height:1.75;">{{ provider|default:"PayHere" }} returned you to Rathna Stores. Payment confirmation is handled automatically from PayHere's verified notification; no admin approval is needed for online payments.</p>
     {% else %}
     <h1 style="font-size:2rem;margin-bottom:1rem;">Checkout cancelled</h1>
     <p style="color:var(--text-muted);line-height:1.75;">No payment was confirmed. Your cart remains available for another attempt.</p>

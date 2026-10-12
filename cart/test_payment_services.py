@@ -2,7 +2,11 @@ from unittest.mock import MagicMock, patch
 
 from django.test import SimpleTestCase
 
-from .payment_services import confirm_offline_payment, create_offline_payment_order
+from .payment_services import (
+    confirm_offline_payment,
+    create_offline_payment_order,
+    get_pending_offline_payments,
+)
 
 
 class OfflinePaymentServiceTests(SimpleTestCase):
@@ -43,7 +47,11 @@ class OfflinePaymentServiceTests(SimpleTestCase):
         order_query.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = [{
             "order_id": "order-1", "customer_id": "customer-1", "payment_status": "PENDING", "order_status": "PENDING",
         }]
-        payment_query.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute.return_value.data = [{
+        payment_query.select.return_value = payment_query
+        payment_query.eq.return_value = payment_query
+        payment_query.in_.return_value = payment_query
+        payment_query.limit.return_value = payment_query
+        payment_query.execute.return_value.data = [{
             "payment_id": "payment-1", "payment_status": "PENDING",
         }]
 
@@ -52,4 +60,21 @@ class OfflinePaymentServiceTests(SimpleTestCase):
         self.assertEqual(result["payment_status"], "PAID")
         finalize.assert_called_once_with(client, "order-1", "customer-1")
         self.assertGreaterEqual(payment_query.update.call_count, 1)
+        payment_query.in_.assert_called_once_with("payment_method", ["BANK_TRANSFER"])
         order_query.update.assert_called_once()
+
+    @patch("cart.payment_services.get_supabase_client")
+    def test_pending_staff_review_is_limited_to_bank_transfers(self, get_client):
+        query = MagicMock()
+        query.select.return_value = query
+        query.eq.return_value = query
+        query.in_.return_value = query
+        query.order.return_value = query
+        query.execute.return_value.data = []
+        client = MagicMock()
+        client.table.return_value = query
+        get_client.return_value = client
+
+        self.assertEqual(get_pending_offline_payments(), [])
+
+        query.in_.assert_called_once_with("payment_method", ["BANK_TRANSFER"])

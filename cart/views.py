@@ -9,6 +9,7 @@ comes exclusively from PayHere's signed server-to-server notification.
 from __future__ import annotations
 
 import logging
+from uuid import UUID
 
 from django.conf import settings
 from django.contrib import messages
@@ -84,7 +85,6 @@ def cart_add(request):
 
     try:
         add_to_cart(request.session, product_id, quantity)
-        messages.success(request, "Added to your cart.")
     except CartError as exc:
         messages.error(request, str(exc))
 
@@ -303,7 +303,20 @@ def pay_now_placeholder(request):
 
 
 def payment_success(request):
-    """Informational return page; only the verified notification confirms payment."""
+    """Return the customer to their order without trusting browser payment status."""
+    # PayHere can return the merchant order id in either the query string or
+    # its form POST.  This only chooses the customer's destination page; the
+    # signed server notification remains the sole payment authority.
+    order_id = (request.GET.get("order_id") or request.POST.get("order_id") or "").strip()
+    if order_id:
+        try:
+            order_uuid = UUID(order_id)
+        except ValueError:
+            pass
+        else:
+            # The order detail view verifies ownership against the signed-in
+            # customer's ID. Payment is finalized separately by the webhook.
+            return redirect("customers:order_detail", order_id=order_uuid)
     return render(request, "cart/payment_result.html", {
         "result": "success",
         "provider": "PayHere",

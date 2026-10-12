@@ -544,6 +544,31 @@ class CartViewTests(TestCase):
         resp = self.client.get(reverse("cart:remove"))
         self.assertEqual(resp.status_code, 405)
 
+    def test_payhere_success_redirects_to_order_detail(self):
+        order_id = "2f2d2f84-121e-4d00-bd78-c10af448a8dc"
+        response = self.client.get(
+            reverse("cart:pay_success"),
+            {"order_id": order_id},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            reverse("customers:order_detail", kwargs={"order_id": order_id}),
+        )
+
+    def test_payhere_success_without_valid_order_id_shows_result(self):
+        response = self.client.get(reverse("cart:pay_success"), {"order_id": "invalid"})
+        self.assertEqual(response.status_code, 200)
+
+    def test_payhere_success_post_redirects_to_order_detail(self):
+        order_id = "2f2d2f84-121e-4d00-bd78-c10af448a8dc"
+        response = self.client.post(reverse("cart:pay_success"), {"order_id": order_id})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            reverse("customers:order_detail", kwargs={"order_id": order_id}),
+        )
+
     @patch("cart.context_processors.get_cart_unit_count", return_value=0)
     @patch("cart.views.get_cart", return_value={
         "items": [], "subtotal": Decimal("0.00"), "total_units": 0, "has_purchasable_items": False,

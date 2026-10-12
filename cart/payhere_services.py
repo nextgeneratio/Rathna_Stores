@@ -18,7 +18,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
-from Rathna_Stores.supabase_client import get_supabase_client
+from Rathna_Stores.supabase_client import get_supabase_client, get_supabase_service_client
 from .stripe_services import (
     ORDERS_TABLE,
     PAYMENTS_TABLE,
@@ -40,6 +40,24 @@ def _configured_credentials() -> tuple[str, str]:
     if not merchant_id or not merchant_secret:
         raise CheckoutError("PayHere checkout is not configured yet.")
     return merchant_id, merchant_secret
+
+
+def _payment_finalizer_client():
+    """Return the privileged client required by the verified callback.
+
+    The notification is deliberately finalized with the Supabase service-role
+    client: the RPC changes payment/order state, stock, and the customer's cart
+    in one transaction and is not callable by browsers.  Check its
+    configuration *before* an order is created, so a merchant can never send a
+    customer to PayHere when this installation could not finish the order.
+    """
+    try:
+        return get_supabase_service_client()
+    except ValueError as exc:
+        raise CheckoutError(
+            "PayHere checkout is temporarily unavailable because automatic "
+            "payment confirmation is not configured. Please contact the store."
+        ) from exc
 
 
 def _amount_text(value: Any) -> str:
@@ -133,6 +151,7 @@ def create_payhere_checkout(
     merchant_id, merchant_secret = _configured_credentials()
     notify_url = _validate_notify_url(notify_url)
     details = _customer_details(customer, billing_address)
+    _payment_finalizer_client()
     order, checkout, _cart = _create_pending_order(
         session, delivery_type, delivery_address, require_distance=True
     )
@@ -229,7 +248,7 @@ def handle_notification(data: dict[str, Any]) -> None:
     if currency != "LKR":
         raise CheckoutError("Unexpected PayHere payment currency.")
 
-    client = get_supabase_client()
+    client = _payment_finalizer_client()
     payment = _payment_for_order(client, order_id)
     if not payment:
         raise CheckoutError("PayHere notification refers to an unknown order.")

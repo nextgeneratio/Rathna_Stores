@@ -66,3 +66,17 @@ def get_supabase_client(access_token: str = "", refresh_token: str = "") -> Clie
     client.storage._client.headers["Authorization"] = authorization
     client.postgrest.auth(bearer_token)
     return client
+
+
+def get_supabase_service_client() -> Client:
+    """Create a server-only client for trusted operations that bypass RLS."""
+    supabase_url = os.getenv("SUPABASE_URL")
+    service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+    if not supabase_url or not service_role_key:
+        raise ValueError(
+            "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set for "
+            "server-side payment finalization."
+        )
+
+    return _new_client(supabase_url, service_role_key)
