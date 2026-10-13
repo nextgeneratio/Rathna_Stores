@@ -19,6 +19,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
 from Rathna_Stores.supabase_client import get_supabase_client, get_supabase_service_client
+from .services import CARTS_TABLE, CART_ITEMS_TABLE
 from .stripe_services import (
     ORDERS_TABLE,
     PAYMENTS_TABLE,
@@ -222,6 +223,48 @@ def _payment_for_order(client, order_id: str) -> dict | None:
     return rows[0] if rows else None
 
 
+def _clear_paid_order_items_from_cart(client, order_id: str) -> None:
+    """Remove only products in the confirmed order from its customer's cart."""
+    order_rows = (
+        client.table(ORDERS_TABLE)
+        .select("customer_id")
+        .eq("order_id", order_id)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    if not order_rows:
+        raise CheckoutError("Confirmed PayHere order was not found while clearing its cart.")
+
+    order_items = (
+        client.table("order_items")
+        .select("product_id")
+        .eq("order_id", order_id)
+        .execute()
+        .data
+        or []
+    )
+    product_ids = list(dict.fromkeys(
+        item["product_id"] for item in order_items if item.get("product_id")
+    ))
+    if not product_ids:
+        return
+
+    carts = (
+        client.table(CARTS_TABLE)
+        .select("cart_id")
+        .eq("customer_id", order_rows[0]["customer_id"])
+        .execute()
+        .data
+        or []
+    )
+    for cart in carts:
+        client.table(CART_ITEMS_TABLE).delete().eq("cart_id", cart["cart_id"]).in_(
+            "product_id", product_ids
+        ).execute()
+
+
 def handle_notification(data: dict[str, Any]) -> None:
     """Verify and process PayHere's server-to-server notification POST.
 
@@ -265,6 +308,7 @@ def handle_notification(data: dict[str, Any]) -> None:
             "p_payment_id": payment_id,
             "p_amount": _amount_text(amount),
         }).execute()
+        _clear_paid_order_items_from_cart(client, order_id)
     elif status_code in {"-1", "-2", "-3"}:
         client.table(PAYMENTS_TABLE).update({
             "payment_status": "FAILED", "transaction_id": payment_id,

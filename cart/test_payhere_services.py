@@ -1,10 +1,11 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 from django.test import SimpleTestCase, override_settings
 
 from .payhere_services import (
     _notification_hash,
     _request_hash,
+    _clear_paid_order_items_from_cart,
     create_payhere_checkout,
     handle_notification,
 )
@@ -88,9 +89,12 @@ class PayHereCheckoutTests(SimpleTestCase):
 
 class PayHereNotificationTests(SimpleTestCase):
     @override_settings(PAYHERE_MERCHANT_ID="1210000", PAYHERE_MERCHANT_SECRET="sandbox-secret")
+    @patch("cart.payhere_services._clear_paid_order_items_from_cart")
     @patch("cart.payhere_services.get_supabase_service_client")
     @patch("cart.payhere_services.get_supabase_client")
-    def test_verified_success_calls_atomic_finalizer(self, get_client, get_service_client):
+    def test_verified_success_calls_atomic_finalizer(
+        self, get_client, get_service_client, clear_paid_items
+    ):
         query = MagicMock()
         query.select.return_value = query
         query.eq.return_value = query
@@ -121,6 +125,36 @@ class PayHereNotificationTests(SimpleTestCase):
             "p_payment_id": "3200000001",
             "p_amount": "1250.00",
         })
+        clear_paid_items.assert_called_once_with(client, "order-1")
+
+    def test_cart_cleanup_removes_only_items_from_paid_order(self):
+        client = MagicMock()
+        queries = [MagicMock() for _ in range(4)]
+        client.table.side_effect = queries
+        for query in queries:
+            query.select.return_value = query
+            query.eq.return_value = query
+            query.limit.return_value = query
+            query.execute.return_value.data = []
+        queries[0].execute.return_value.data = [{"customer_id": "customer-1"}]
+        queries[1].execute.return_value.data = [
+            {"product_id": "cake-1"}, {"product_id": "cake-1"}, {"product_id": "cake-2"},
+        ]
+        queries[2].execute.return_value.data = [{"cart_id": "cart-1"}]
+        queries[3].delete.return_value = queries[3]
+        queries[3].in_.return_value = queries[3]
+
+        _clear_paid_order_items_from_cart(client, "order-1")
+
+        self.assertEqual(client.table.call_args_list, [
+            call("orders"),
+            call("order_items"),
+            call("carts"),
+            call("cart_items"),
+        ])
+        queries[3].eq.assert_called_once_with("cart_id", "cart-1")
+        queries[3].in_.assert_called_once_with("product_id", ["cake-1", "cake-2"])
+        queries[3].execute.assert_called_once()
 
     @override_settings(PAYHERE_MERCHANT_ID="1210000", PAYHERE_MERCHANT_SECRET="sandbox-secret")
     def test_invalid_notification_signature_is_rejected(self):

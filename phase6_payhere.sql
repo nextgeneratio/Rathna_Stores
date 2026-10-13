@@ -86,8 +86,13 @@ BEGIN
   UPDATE public.customers
   SET total_spend = COALESCE(total_spend, 0) + v_order.total_amount, updated_at = now()
   WHERE customer_id = v_order.customer_id;
-  DELETE FROM public.cart_items
-  WHERE cart_id IN (SELECT cart_id FROM public.carts WHERE customer_id = v_order.customer_id);
+  DELETE FROM public.cart_items AS cart_item
+  USING public.carts AS cart
+  WHERE cart_item.cart_id = cart.cart_id
+    AND cart.customer_id = v_order.customer_id
+    AND cart_item.product_id IN (
+      SELECT product_id FROM public.order_items WHERE order_id = p_order_id
+    );
   INSERT INTO public.order_status_history(order_id, status, note)
   VALUES (p_order_id, 'CONFIRMED', 'Verified PayHere payment');
   UPDATE public.payhere_webhook_events

@@ -1807,6 +1807,56 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 .checkout-empty h2 { margin-bottom: var(--sp-2); }
 .checkout-empty p { color: var(--text-muted); margin-bottom: var(--sp-5); }
 
+/* ── Customer orders ──────────────────────────────────────── */
+.customer-orders-section { padding: var(--sp-12) 0; flex: 1; }
+.customer-orders-section > .container { max-width: 900px; }
+
+@media (max-width: 600px) {
+  .customer-orders-section { padding: var(--sp-8) 0; }
+  .customer-orders-section .page-header { margin-bottom: var(--sp-5); }
+  .customer-orders-section .page-header h1 { font-size: 1.5rem; }
+  .customer-orders-section .page-header .btn { padding: var(--sp-2) var(--sp-3); }
+  .customer-orders-table-wrap { overflow: visible; background: transparent; border: 0; box-shadow: none; }
+  .customer-orders-table,
+  .customer-orders-table tbody { display: grid; gap: var(--sp-3); }
+  .customer-orders-table thead { display: none; }
+  .customer-orders-table tbody tr {
+    display: grid;
+    padding: var(--sp-2) var(--sp-4);
+    border: var(--border);
+    border-radius: var(--card-radius);
+    background: var(--card-bg);
+    box-shadow: var(--card-shadow);
+  }
+  .customer-orders-table tbody tr:hover td { background: transparent; }
+  .customer-orders-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--sp-4);
+    padding: var(--sp-3) 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+  .customer-orders-table td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    color: var(--text-muted);
+    font-size: .75rem;
+    font-weight: 700;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .customer-orders-table .customer-orders-action { justify-content: flex-end; }
+  .customer-orders-table .customer-orders-action::before { content: none; }
+  .customer-orders-table .customer-orders-empty {
+    display: block;
+    text-align: center;
+  }
+  .customer-orders-table .customer-orders-empty::before { content: none; }
+}
+
 @media (max-width: 900px) {
   .checkout-layout { grid-template-columns: minmax(0, 1fr) 320px; gap: var(--sp-5); }
 }

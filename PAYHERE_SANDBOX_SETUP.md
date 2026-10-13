@@ -80,9 +80,11 @@ secrets.
 
 Run [`phase4_schema.sql`](phase4_schema.sql) first if it has not already been
 applied, then run [`phase6_payhere.sql`](phase6_payhere.sql) in the Supabase SQL
-editor. The latter adds the idempotent transaction that marks verified PayHere
-orders paid/confirmed, reduces stock, clears the customer's cart, updates total
-spend, and prevents duplicate notifications from repeating those changes.
+editor. If it was applied previously, run the updated script again to replace
+the finalizer function. The idempotent transaction marks verified PayHere
+orders paid/confirmed, reduces stock, removes the purchased products from the
+customer's cart, updates total spend, and prevents duplicate notifications from
+repeating those changes.
 
 ## 5. Test the full flow
 
