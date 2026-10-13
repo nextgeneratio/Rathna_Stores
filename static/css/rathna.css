@@ -1129,6 +1129,7 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   .nav-links.open, .nav-actions.open { display: flex; }
   .nav-toggle { display: flex; }
   .site-nav .container { flex-wrap: wrap; height: auto; padding: var(--sp-3) var(--sp-5); }
+  .nav-actions { width: 100%; justify-content: center; }
   .nav-links {
     flex-direction: column;
     width: 100%;
