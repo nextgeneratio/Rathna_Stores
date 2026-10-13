@@ -7,7 +7,7 @@
   <meta name="description" content="{% block meta_description %}Rathna Stores — handcrafted cakes for every occasion.{% endblock %}" />
   <title>{% block title %}Rathna Stores{% endblock %}</title>
   {% load static %}
-  <link rel="stylesheet" href="{% static 'css/rathna.css' %}?v=home-catalogue-redesign-1" />
+  <link rel="stylesheet" href="{% static 'css/rathna.css' %}?v=mobile-nav-actions-1" />
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -403,9 +403,11 @@
     /* ── Mobile nav ────────────────────────────────────── */
     var toggle = document.querySelector('.nav-toggle');
     var navLinks = document.getElementById('nav-links');
+    var navActions = document.querySelector('.nav-actions');
     if (toggle && navLinks) {
       toggle.addEventListener('click', function () {
         var open = navLinks.classList.toggle('open');
+        if (navActions) navActions.classList.toggle('open', open);
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
       });
     }
