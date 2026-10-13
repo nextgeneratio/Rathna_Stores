@@ -1666,17 +1666,11 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 @media (max-width: 900px) {
   .cart-layout { grid-template-columns: 1fr; }
   .cart-summary-col { position: static; }
-  .checkout-layout { grid-template-columns: minmax(0, 1fr) 320px; gap: var(--sp-5); }
 }
 @media (max-width: 600px) {
   .cart-item { grid-template-columns: 72px 1fr; }
   .cart-item-line-total { grid-column: 2; text-align: left; }
   .cart-item-image { width: 72px; height: 72px; }
-  .checkout-form-grid, .checkout-fulfilment { grid-template-columns: 1fr; }
-  .checkout-form-grid-full { grid-column: auto; }
-  .checkout-layout { grid-template-columns: 1fr; }
-  .checkout-summary { position: static; grid-row: 1; }
-  .checkout-summary-card { padding: var(--sp-5); }
 }
 
 /* ── PayHere checkout ─────────────────────────────────────── */
@@ -1812,6 +1806,20 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 .checkout-empty { background: var(--card-bg); border: var(--border); border-radius: var(--card-radius); padding: var(--sp-10); text-align: center; }
 .checkout-empty h2 { margin-bottom: var(--sp-2); }
 .checkout-empty p { color: var(--text-muted); margin-bottom: var(--sp-5); }
+
+@media (max-width: 900px) {
+  .checkout-layout { grid-template-columns: minmax(0, 1fr) 320px; gap: var(--sp-5); }
+}
+@media (max-width: 768px) {
+  .checkout-layout { grid-template-columns: minmax(0, 1fr); }
+  .checkout-summary { position: static; grid-row: 1; }
+  .checkout-summary-card { padding: var(--sp-5); }
+}
+@media (max-width: 600px) {
+  .checkout-form-grid, .checkout-fulfilment { grid-template-columns: minmax(0, 1fr); }
+  .checkout-form-grid-full { grid-column: 1; }
+  .checkout-card, .checkout-summary, .checkout-secure-note { min-width: 0; }
+}
 
 /* ── Reduced motion: no transitions on key elements ───────── */
 @media (prefers-reduced-motion: reduce) {
