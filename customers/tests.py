@@ -246,6 +246,24 @@ class RegistrationServiceTests(TestCase):
         self.assertFalse(result["session_established"])
         self.assertNotIn(CUSTOMER_ID_SESSION_KEY, session)
 
+    @patch("customers.services.get_supabase_client")
+    def test_register_sends_confirmation_to_the_supplied_site_url(self, mock_get_client):
+        from customers.services import register_customer
+        auth_resp = MagicMock()
+        auth_resp.user = _make_auth_user()
+        auth_resp.session = None
+        mock_client = _mock_supabase({"customers": [_make_customer()]})
+        mock_client.auth.sign_up.return_value = auth_resp
+        mock_get_client.return_value = mock_client
+
+        register_customer(
+            {}, "Amara", "Perera", "amara@example.com", "password123", "password123",
+            email_redirect_to="https://shop.example.test/",
+        )
+
+        auth_options = mock_client.auth.sign_up.call_args.args[0]["options"]
+        self.assertEqual(auth_options["email_redirect_to"], "https://shop.example.test/")
+
     def test_register_password_mismatch_raises(self):
         from customers.services import register_customer
         with self.assertRaises(AuthError) as ctx:

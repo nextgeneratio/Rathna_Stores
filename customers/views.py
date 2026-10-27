@@ -75,6 +75,12 @@ def customer_register(request):
 
     if request.method == "POST":
         try:
+            email_redirect_to = request.build_absolute_uri("/")
+            # Cloudflare terminates HTTPS before forwarding to the local Django
+            # development server. Preserve the browser-facing HTTPS scheme for
+            # Supabase's confirmation link.
+            if request.headers.get("X-Forwarded-Proto", "").split(",")[0].strip() == "https":
+                email_redirect_to = "https://" + request.get_host() + "/"
             result = register_customer(
                 session=request.session,
                 first_name=request.POST.get("first_name", "").strip(),
@@ -85,6 +91,9 @@ def customer_register(request):
                 phone_number=request.POST.get("phone_number", ""),
                 is_email_notifications_enabled=request.POST.get("email_notifications") == "1",
                 is_sms_notifications_enabled=request.POST.get("sms_notifications") == "1",
+                # The confirmation link returns tokens in its URL fragment.
+                # base.html consumes those tokens and creates the Django session.
+                email_redirect_to=email_redirect_to,
             )
         except AuthError as exc:
             messages.error(request, str(exc))

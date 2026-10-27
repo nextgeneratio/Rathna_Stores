@@ -173,6 +173,7 @@ def register_customer(
     phone_number: str = "",
     is_email_notifications_enabled: bool = True,
     is_sms_notifications_enabled: bool = False,
+    email_redirect_to: str = "",
 ) -> dict:
     """
     Register a new customer via Supabase Auth, create the customers row,
@@ -199,15 +200,21 @@ def register_customer(
 
     # Step 1: Create Supabase Auth identity
     try:
+        auth_options = {
+            "data": {
+                "first_name": first_name,
+                "last_name": last_name,
+            },
+        }
+        # Without this Supabase falls back to its dashboard Site URL. The view
+        # supplies the URL of the running Django shop instead.
+        if email_redirect_to:
+            auth_options["email_redirect_to"] = email_redirect_to
+
         auth_resp = client.auth.sign_up({
             "email": email,
             "password": password,
-            "options": {
-                "data": {
-                    "first_name": first_name,
-                    "last_name": last_name,
-                }
-            },
+            "options": auth_options,
         })
     except Exception as exc:
         err_msg = str(exc).lower()
