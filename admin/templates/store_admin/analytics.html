@@ -7,7 +7,7 @@
 <div class="page-header">
   <div>
     <h1>Staff analytics</h1>
-    <p class="page-header-meta">Paid orders only: DELIVERED or COMPLETED with payment status PAID.</p>
+    <p class="page-header-meta">Paid orders only. Purchases are counted as soon as payment is successful.</p>
   </div>
 </div>
 
@@ -17,6 +17,7 @@
   <label for="report-end">End date</label>
   <input id="report-end" name="end" type="date" value="{{ report_end|date:'Y-m-d' }}" required />
   <button class="btn btn-primary" type="submit">Run report</button>
+  <button class="btn btn-secondary" type="submit" formaction="{% url 'store_admin:analytics_pdf' %}">Download PDF</button>
   <span class="analytics-presets" aria-label="Date presets">
     <a class="btn btn-ghost btn-sm" href="?days=7">7 days</a>
     <a class="btn btn-ghost btn-sm" href="?days=30">30 days</a>

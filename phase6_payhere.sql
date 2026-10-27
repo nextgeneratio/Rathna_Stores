@@ -1,6 +1,40 @@
 -- PayHere Checkout support. Run this in the Supabase SQL editor after
 -- phase4_schema.sql, which adds the generic provider fields to payments.
 
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS pickup_ready_at TIMESTAMPTZ NULL;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS estimated_delivery_at TIMESTAMPTZ NULL;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS checkout_source TEXT NOT NULL DEFAULT 'CART'
+  CHECK (checkout_source IN ('CART', 'DIRECT'));
+CREATE INDEX IF NOT EXISTS idx_orders_pickup_ready_at
+ON public.orders(pickup_ready_at) WHERE order_status = 'PROCESSING';
+
+CREATE OR REPLACE FUNCTION public.advance_fulfilment_statuses()
+RETURNS INTEGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_count INTEGER;
+BEGIN
+  WITH promoted AS (
+    UPDATE public.orders SET order_status = 'READY', updated_at = now()
+    WHERE delivery_type = 'PICKUP' AND payment_status = 'PAID'
+      AND order_status = 'PROCESSING' AND pickup_ready_at <= now()
+    RETURNING order_id
+  ) INSERT INTO public.order_status_history(order_id, status, note)
+    SELECT order_id, 'READY', 'Cake is ready for pickup' FROM promoted;
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  RETURN v_count;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.advance_fulfilment_statuses() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.advance_fulfilment_statuses() TO service_role;
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'rathna-ready-pickups') THEN
+    PERFORM cron.schedule('rathna-ready-pickups', '* * * * *',
+      'SELECT public.advance_fulfilment_statuses();');
+  END IF;
+END;
+$$;
+
 CREATE TABLE IF NOT EXISTS public.payhere_webhook_events (
   event_id TEXT PRIMARY KEY,
   order_id UUID NOT NULL REFERENCES public.orders(order_id) ON DELETE RESTRICT,
@@ -81,7 +115,11 @@ BEGIN
       transaction_id = p_payment_id, paid_at = now(), updated_at = now()
   WHERE payment_id = v_payment.payment_id;
   UPDATE public.orders
-  SET order_status = 'CONFIRMED', payment_status = 'PAID', order_date = now(), updated_at = now()
+  SET order_status = CASE WHEN delivery_type = 'PICKUP' THEN 'PROCESSING' ELSE 'OUT_FOR_DELIVERY' END,
+      payment_status = 'PAID', order_date = now(),
+      pickup_ready_at = CASE WHEN delivery_type = 'PICKUP' THEN now() + interval '1 hour' ELSE NULL END,
+      estimated_delivery_at = CASE WHEN delivery_type = 'DELIVERY' THEN now() + interval '3 hours' ELSE NULL END,
+      updated_at = now()
   WHERE order_id = p_order_id;
   UPDATE public.customers
   SET total_spend = COALESCE(total_spend, 0) + v_order.total_amount, updated_at = now()
@@ -92,9 +130,12 @@ BEGIN
     AND cart.customer_id = v_order.customer_id
     AND cart_item.product_id IN (
       SELECT product_id FROM public.order_items WHERE order_id = p_order_id
-    );
+    )
+    AND v_order.checkout_source = 'CART';
   INSERT INTO public.order_status_history(order_id, status, note)
-  VALUES (p_order_id, 'CONFIRMED', 'Verified PayHere payment');
+  VALUES (p_order_id, CASE WHEN v_order.delivery_type = 'PICKUP' THEN 'PROCESSING' ELSE 'OUT_FOR_DELIVERY' END,
+          CASE WHEN v_order.delivery_type = 'PICKUP' THEN 'Verified PayHere payment; cake will be ready in about one hour'
+               ELSE 'Verified PayHere payment; simulated delivery is scheduled within three hours' END);
   UPDATE public.payhere_webhook_events
   SET processing_status = 'PROCESSED', processed_at = now()
   WHERE event_id = p_event_id;

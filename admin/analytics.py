@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 PURCHASE_WINDOW_DAYS = 30
 MAX_REPORT_DAYS = 90
-QUALIFYING_ORDER_STATUSES = ("DELIVERED", "COMPLETED")
 QUALIFYING_PAYMENT_STATUS = "PAID"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -65,17 +64,34 @@ def parse_report_range(start_text: str = "", end_text: str = "", days: int = PUR
 
 
 def _qualifying_orders(start: date, end: date) -> list[dict]:
-    rows = _rows(
+    """Return paid orders in the range they were paid, with a legacy fallback.
+
+    An order is a purchase as soon as its payment succeeds.  Fulfilment status is
+    deliberately not used here: paid orders move through CONFIRMED, PROCESSING,
+    OUT_FOR_DELIVERY, READY, and finally DELIVERED/COMPLETED.  Restricting the
+    report to the final two states left current sales out of every headline total.
+    """
+    columns = "order_id,customer_id,order_status,payment_status,created_at,order_date,total_amount"
+    paid_rows = _rows(
         "orders",
-        "order_id,customer_id,order_status,payment_status,created_at,order_date,total_amount",
+        columns,
+        ("gte", "order_date", start.isoformat()),
+        ("lt", "order_date", (end + timedelta(days=1)).isoformat()),
+    )
+    # Older rows may predate order_date. Keep them reportable by their creation
+    # time, and de-duplicate rows that were returned by both queries.
+    legacy_rows = _rows(
+        "orders",
+        columns,
         ("gte", "created_at", start.isoformat()),
         ("lt", "created_at", (end + timedelta(days=1)).isoformat()),
     )
-    return [
-        row for row in rows
-        if row.get("order_status") in QUALIFYING_ORDER_STATUSES
-        and row.get("payment_status") == QUALIFYING_PAYMENT_STATUS
-    ]
+    orders_by_id = {
+        str(row.get("order_id")): row
+        for row in [*paid_rows, *legacy_rows]
+        if row.get("payment_status") == QUALIFYING_PAYMENT_STATUS
+    }
+    return list(orders_by_id.values())
 
 
 def _empty_metrics() -> dict[str, Any]:
@@ -214,10 +230,31 @@ def request_product_opportunities(snapshot: dict[str, Any]) -> list[dict[str, An
     prompt = json.dumps(snapshot, default=str, separators=(",", ":"))
     system = '{"suggestions":[{"product_or_category":"string","rationale":"string","supporting_signals":["string"],"target_segment":"aggregate segment","confidence":"low|medium|high","cautions":["string"]}]}'
     try:
-        response = httpx.post(OPENROUTER_URL, headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, json={"model": getattr(settings, "OPENROUTER_MODEL", ""), "temperature": 0.2, "max_tokens": 900, "response_format": {"type": "json_object"}, "messages": [{"role": "system", "content": "Return only JSON matching this schema: " + system}, {"role": "user", "content": prompt}]}, timeout=15)
+        response = httpx.post(
+            OPENROUTER_URL,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": getattr(settings, "OPENROUTER_MODEL", ""),
+                "temperature": 0.2,
+                # The configured free model supports reasoning. Disable it for this
+                # short, structured task so its entire token budget is available for
+                # the JSON that the analytics page needs to render.
+                "reasoning": {"enabled": False},
+                "max_tokens": 1800,
+                "response_format": {"type": "json_object"},
+                "messages": [
+                    {"role": "system", "content": "Return only JSON matching this schema: " + system},
+                    {"role": "user", "content": prompt},
+                ],
+            },
+            timeout=45,
+        )
         response.raise_for_status()
         data = response.json()
-        result = json.loads(data["choices"][0]["message"]["content"])
+        content = data["choices"][0]["message"].get("content")
+        if not isinstance(content, str) or not content.strip():
+            raise ValueError("AI response did not contain suggestions")
+        result = json.loads(content)
         suggestions = result.get("suggestions")
         if not isinstance(suggestions, list) or any(not isinstance(item, dict) or not all(key in item for key in ("product_or_category", "rationale", "supporting_signals", "target_segment", "confidence", "cautions")) for item in suggestions):
             raise ValueError("invalid suggestion schema")

@@ -25,8 +25,9 @@ from .services import (
     update_cart_item,
     remove_from_cart,
 )
-from .stripe_services import CheckoutError
+from .stripe_services import CheckoutError, _cart_for_checkout
 from .payhere_services import create_payhere_checkout, handle_notification
+from .payment_services import create_bank_transfer_order
 from .delivery_services import delivery_quote, DeliveryError
 from customers.services import (
     CustomerError,
@@ -67,6 +68,22 @@ def cart_detail(request):
     # total instead of making an additional cart-count request while rendering.
     request._rathna_cart_unit_count = cart["total_units"]
     return render(request, "cart/cart.html", {"cart": cart})
+
+
+@require_POST
+def buy_now(request):
+    """Start a one-product checkout without creating or changing a cart row."""
+    product_id = request.POST.get("product_id", "").strip()
+    try:
+        quantity = max(1, int(request.POST.get("quantity", "1")))
+        UUID(product_id)
+    except (ValueError, TypeError):
+        messages.error(request, "Choose a valid cake and quantity.")
+        return redirect("cakes:catalogue")
+    request.session["direct_checkout"] = {"product_id": product_id, "quantity": quantity}
+    request.session.pop("checkout_selected_cart_item_ids", None)
+    request.session.modified = True
+    return redirect("cart:pay_now")
 
 
 # ── Add to cart ───────────────────────────────────────────────────────────────
@@ -143,9 +160,22 @@ def pay_now_placeholder(request):
         return redirect("/account/login/?next=/cart/pay/")
 
     customer_id = get_authenticated_customer_id(request.session)
+    selected_ids = request.GET.getlist("items")
+    if request.GET.get("selection") == "1":
+        selected_ids = [value for value in selected_ids if value]
+        request.session["checkout_selected_cart_item_ids"] = selected_ids
+        request.session.pop("direct_checkout", None)
+        request.session.modified = True
     addresses = get_customer_addresses(customer_id) if customer_id else []
     customer = get_customer_profile(customer_id) if customer_id else None
     cart = get_cart(request.session)
+    # Recalculate the visible summary from the same server-owned selection used
+    # when the payment request is created; never show a full-cart total for a
+    # selected-item checkout.
+    try:
+        checkout_cart, _ = _cart_for_checkout(request.session)
+    except CheckoutError:
+        checkout_cart = cart
     default_address = next((item for item in addresses if item.get("is_default")), None)
     billing_address = default_address or (addresses[0] if addresses else {})
     delivery_options = []
@@ -245,6 +275,17 @@ def pay_now_placeholder(request):
                 **(customer or {}),
                 **contact,
             }
+            payment_method = request.POST.get("payment_method", "PAYHERE").strip().upper()
+            if payment_method == "BANK_TRANSFER":
+                result = create_bank_transfer_order(
+                    request.session, delivery_type, address, request.FILES.get("bank_slip")
+                )
+                request.session.pop("direct_checkout", None)
+                request.session.pop("checkout_selected_cart_item_ids", None)
+                messages.success(request, "Bank slip received. We will confirm your order after staff review.")
+                return redirect("customers:order_detail", order_id=UUID(result["order_id"]))
+            if payment_method != "PAYHERE":
+                raise CheckoutError("Choose PayHere or bank transfer.")
             origin = request.build_absolute_uri("/").rstrip("/")
             checkout = create_payhere_checkout(
                 request.session,
@@ -271,7 +312,7 @@ def pay_now_placeholder(request):
             messages.error(request, "We couldn't start checkout. Please review your details and try again.")
 
     return render(request, "cart/pay_now_placeholder.html", {
-        "cart": cart,
+        "cart": checkout_cart,
         "addresses": addresses,
         "delivery_options": delivery_options,
         "customer": customer or {},
@@ -293,12 +334,15 @@ def pay_now_placeholder(request):
             "delivery_type": request.POST.get("delivery_type", ""),
             "address_id": request.POST.get("address_id", ""),
         },
-        "cart_subtotal": cart.get("subtotal") or "0.00",
+        "cart_subtotal": checkout_cart.get("subtotal") or "0.00",
         "store_latitude": getattr(settings, "STORE_LATITUDE", "6.9271"),
         "store_longitude": getattr(settings, "STORE_LONGITUDE", "79.8612"),
         "delivery_base_fee": getattr(settings, "DELIVERY_BASE_FEE_LKR", "150.00"),
         "delivery_rate_per_km": getattr(settings, "DELIVERY_RATE_PER_KM_LKR", "80.00"),
         "location_api_base_url": getattr(settings, "LOCATION_API_BASE_URL", ""),
+        "is_direct_purchase": bool(request.session.get("direct_checkout")),
+        "selected_cart_item_ids": request.session.get("checkout_selected_cart_item_ids", []),
+        "bank_transfer_details": getattr(settings, "BANK_TRANSFER_DETAILS", "Contact Rathna Stores for bank-transfer details."),
     })
 
 

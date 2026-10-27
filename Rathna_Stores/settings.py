@@ -13,11 +13,14 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 from pathlib import Path
 import os
 from decimal import Decimal
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 from django.core.management.utils import get_random_secret_key
 
 # Load environment variables from .env.local
-load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env.local'))
+# The local file is the source of truth during development, including when a
+# temporary public tunnel rotates while the development server is running.
+load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env.local'), override=True)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -154,10 +157,20 @@ PAYHERE_SANDBOX = _env_bool('PAYHERE_SANDBOX', True)
 PAYHERE_NOTIFY_URL = os.getenv('PAYHERE_NOTIFY_URL', '').strip()
 PAYHERE_RETURN_URL = os.getenv('PAYHERE_RETURN_URL', '').strip()
 PAYHERE_CANCEL_URL = os.getenv('PAYHERE_CANCEL_URL', '').strip()
+# Local PayHere sandbox tests commonly use a temporary HTTPS tunnel. Its
+# configured callback host must be accepted by Django after the tunnel rotates.
+_payhere_callback = urlparse(PAYHERE_NOTIFY_URL)
+if _payhere_callback.hostname and _payhere_callback.hostname not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_payhere_callback.hostname)
+if _payhere_callback.scheme in {'http', 'https'} and _payhere_callback.netloc:
+    _payhere_origin = f'{_payhere_callback.scheme}://{_payhere_callback.netloc}'
+    if _payhere_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_payhere_origin)
 DELIVERY_FEE_LKR = Decimal(os.getenv('DELIVERY_FEE_LKR', '0.00'))
 DELIVERY_BASE_FEE_LKR = Decimal(os.getenv('DELIVERY_BASE_FEE_LKR', '150.00'))
 DELIVERY_RATE_PER_KM_LKR = Decimal(os.getenv('DELIVERY_RATE_PER_KM_LKR', '80.00'))
 DELIVERY_ESTIMATE_HOURS = int(os.getenv('DELIVERY_ESTIMATE_HOURS', '24'))
+BANK_TRANSFER_DETAILS = os.getenv('BANK_TRANSFER_DETAILS', 'Account details will be shown here by Rathna Stores.')
 STORE_LATITUDE = os.getenv('STORE_LATITUDE', '6.9271')
 STORE_LONGITUDE = os.getenv('STORE_LONGITUDE', '79.8612')
 LOCATION_API_BASE_URL = os.getenv('LOCATION_API_BASE_URL', 'https://locatesrilanka.herokuapp.com').rstrip('/')

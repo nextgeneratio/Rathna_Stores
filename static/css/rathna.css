@@ -760,6 +760,9 @@ button, [type="button"], [type="submit"] { cursor: pointer; }
 .alert-danger  { background: #fceaea; color: #922b2b; border-color: #e8b0b0; }
 .alert-warning { background: #fef9e7; color: #7d6008; border-color: #f7dc6f; }
 .alert-info    { background: #eaf2fb; color: #1a5276; border-color: #a9cce3; }
+.order-status-message { align-items: baseline; }
+.order-status-message strong { flex: 0 0 auto; }
+.order-status-message span { min-width: 0; }
 
 /* ── Forms ────────────────────────────────────────────────── */
 .form-card {
@@ -1125,14 +1128,55 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 
 @media (max-width: 768px) {
   .site-nav { height: auto; }
-  .nav-links, .nav-actions { display: none; }
-  .nav-links.open, .nav-actions.open { display: flex; }
-  .nav-toggle { display: flex; }
-  .site-nav .container { flex-wrap: wrap; height: auto; padding: var(--sp-3) var(--sp-5); }
-  .nav-actions { width: 100%; justify-content: center; }
+  .nav-links { display: none; }
+  .nav-links.open { display: flex; }
+  .nav-toggle {
+    display: flex;
+    order: 3;
+    flex: 0 0 auto;
+    padding: var(--sp-2);
+  }
+  /* The links may wrap below, but the brand, cart, profile and menu stay on row one. */
+  .site-nav .container {
+    flex-wrap: wrap;
+    gap: 0;
+    height: auto;
+    padding: var(--sp-3) var(--sp-5);
+  }
+  /* Keep cart and account controls in the compact header in both menu states. */
+  .nav-actions {
+    display: flex;
+    width: auto;
+    margin-left: auto;
+    margin-right: var(--sp-1);
+    order: 2;
+    flex: 0 0 auto;
+    gap: var(--sp-1);
+  }
+  .site-nav .nav-cart-btn {
+    display: inline-flex;
+    width: 38px;
+    height: 42px;
+    justify-content: center;
+    padding: 0;
+  }
+  .nav-cart-label { display: none; }
+  .nav-profile-btn {
+    width: 56px;
+    height: 42px;
+    justify-content: center;
+    padding: 3px;
+    border-color: rgba(255,255,255,.28);
+  }
+  .nav-profile-btn .nav-avatar { width: 36px; height: 36px; }
+  .nav-profile-name,
+  .nav-profile-btn > svg { display: none; }
+  .nav-profile-menu { right: 0; }
+  .nav-actions.open { width: auto; margin-left: auto; }
   .nav-links {
     flex-direction: column;
     width: 100%;
+    order: 4;
     padding: var(--sp-3) 0 var(--sp-4);
     border-top: 1px solid rgba(255,255,255,.1);
     gap: var(--sp-1);
@@ -2089,6 +2133,7 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   .auth-dialog-panel { padding: var(--sp-6); }
   .nav-profile-name { display: none; }
   .profile-header { flex-direction: column; align-items: center; text-align: center; }
+  .order-status-message { flex-direction: column; align-items: flex-start; gap: .4rem; }
 }
 
 /* ── Reduced motion: dialog ─────────────────────────────────── */
@@ -2117,6 +2162,10 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   overflow-y: auto; background: #fbf8f3; }
 .shop-chat-message { max-width: 86%; margin: 0; padding: .65rem .75rem; border-radius: 10px;
   color: var(--cocoa); font-size: .88rem; line-height: 1.45; white-space: pre-wrap; }
+.shop-chat-message p { margin: 0 0 .55rem; }
+.shop-chat-message p:last-child { margin-bottom: 0; }
+.shop-chat-list { margin: .15rem 0 0; padding-left: 1.2rem; }
+.shop-chat-list li + li { margin-top: .35rem; }
 .shop-chat-message--assistant { align-self: flex-start; background: #fff; border: 1px solid var(--beige-border); }
 .shop-chat-message--user { align-self: flex-end; background: var(--cocoa); color: #fff; }
 .shop-chat-products { display: grid; gap: .55rem; }

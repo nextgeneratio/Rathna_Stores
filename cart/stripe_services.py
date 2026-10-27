@@ -42,6 +42,12 @@ def _money(value: Any) -> Decimal:
     return Decimal(str(value or "0")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
+def _missing_delivery_distance_column(exc: Exception) -> bool:
+    """Identify deployments that have not yet run the optional Phase 5 migration."""
+    message = str(exc).lower()
+    return "delivery_distance_km" in message and "does not exist" in message
+
+
 def _cart_for_checkout(session) -> tuple[dict, str]:
     from customers.services import CUSTOMER_ID_SESSION_KEY
 
@@ -49,10 +55,58 @@ def _cart_for_checkout(session) -> tuple[dict, str]:
     if not customer_id:
         raise CheckoutError("Please sign in before starting checkout.")
     cart = get_cart(session)
-    items = [item for item in cart.get("items", []) if item.get("is_available") and int(item.get("quantity", 0)) > 0]
+    selected_ids = set(session.get("checkout_selected_cart_item_ids") or [])
+    direct_purchase = session.get("direct_checkout") or {}
+    if direct_purchase:
+        product_id = str(direct_purchase.get("product_id") or "")
+        quantity = int(direct_purchase.get("quantity") or 1)
+        rows = get_supabase_client().table(PRODUCTS_TABLE).select(
+            "product_id,name,description,price,discount_type,discount_value,stock_quantity,is_active,category_id,"
+            "categories!inner(category_id,name,slug,is_active)"
+        ).eq("product_id", product_id).limit(1).execute().data or []
+        if not rows:
+            raise CheckoutError("This cake is no longer available.")
+        from cakes.services import enrich_product
+        product = enrich_product(rows[0])
+        if not product.get("in_stock") or quantity > int(product.get("stock_quantity") or 0):
+            raise CheckoutError("This cake is out of stock or the requested quantity is unavailable.")
+        unit_price = product["effective_price"]
+        item = {"product_id": product_id, "product": product, "quantity": quantity,
+                "effective_qty": quantity, "unit_price": unit_price,
+                "line_total": _money(unit_price * quantity), "is_available": True}
+        return {"items": [item], "subtotal": item["line_total"], "has_purchasable_items": True,
+                "is_direct_purchase": True}, str(customer_id)
+    # An explicitly submitted empty selection must never silently become a
+    # checkout for the entire cart.
+    if "checkout_selected_cart_item_ids" in session and not selected_ids:
+        raise CheckoutError("Choose at least one available cart item to pay for.")
+    items = [
+        item for item in cart.get("items", [])
+        if item.get("is_available") and int(item.get("quantity", 0)) > 0
+        and (not selected_ids or str(item.get("cart_item_id")) in selected_ids)
+    ]
     if not items or not cart.get("has_purchasable_items"):
         raise CheckoutError("Your cart has no available items to check out.")
-    return {**cart, "items": items}, str(customer_id)
+    if selected_ids and not items:
+        raise CheckoutError("Choose at least one available cart item to pay for.")
+    # `cart["subtotal"]` covers the whole cart. Rebuild every checkout total
+    # from the filtered rows so the checkout summary and payment amount cannot
+    # include an item that was deliberately left unselected.
+    subtotal = sum(
+        (
+            _money(item.get("line_total"))
+            if item.get("line_total") is not None
+            else _money(item.get("unit_price")) * int(item.get("effective_qty") or item.get("quantity") or 0)
+            for item in items
+        ),
+        Decimal("0.00"),
+    )
+    return {
+        **cart,
+        "items": items,
+        "subtotal": _money(subtotal),
+        "total_units": sum(int(item.get("effective_qty") or item.get("quantity") or 0) for item in items),
+    }, str(customer_id)
 
 
 def _create_pending_order(session, delivery_type: str = "PICKUP", address: dict | None = None, require_distance: bool = False) -> tuple[dict, dict, dict]:
@@ -91,6 +145,7 @@ def _create_pending_order(session, delivery_type: str = "PICKUP", address: dict 
         "order_status": "PENDING",
         "payment_status": "PENDING",
         "payment_method": "stripe_test",
+        "checkout_source": "DIRECT" if cart.get("is_direct_purchase") else "CART",
         "order_date": timezone.now().isoformat(),
     }
     order["delivery_type"] = delivery_type
@@ -106,7 +161,21 @@ def _create_pending_order(session, delivery_type: str = "PICKUP", address: dict 
             "delivery_distance_km": str(delivery_quote_data["distance_km"]) if delivery_quote_data else None,
             "estimated_delivery_at": delivery_quote_data["estimated_at"].isoformat() if delivery_quote_data else None,
         })
-    created = client.table(ORDERS_TABLE).insert(order).execute().data or []
+    try:
+        created = client.table(ORDERS_TABLE).insert(order).execute().data or []
+    except Exception as exc:
+        # Phase 5 added delivery_distance_km for tracking. Existing shops can
+        # still take a correctly priced delivery order while that nonessential
+        # column is awaiting migration; the fee and final total are retained.
+        if delivery_type != "DELIVERY" or not _missing_delivery_distance_column(exc):
+            raise
+        logger.warning(
+            "orders.delivery_distance_km is unavailable; creating delivery "
+            "order without the optional distance snapshot. Apply "
+            "phase5_delivery_tracking.sql to enable it."
+        )
+        order.pop("delivery_distance_km", None)
+        created = client.table(ORDERS_TABLE).insert(order).execute().data or []
     if not created:
         raise CheckoutError("Could not start the checkout. Please try again.")
 
@@ -229,9 +298,15 @@ def _finalize_paid_order(client, order_id: str, customer_id: str) -> None:
             raise CheckoutError("Stock changed before payment confirmation.")
         client.table(PRODUCTS_TABLE).update({"stock_quantity": current_stock - quantity}).eq("product_id", item["product_id"]).execute()
 
+    order_rows = client.table(ORDERS_TABLE).select("checkout_source").eq("order_id", order_id).limit(1).execute().data or []
+    # A direct checkout must never touch the customer's cart. For a selected
+    # cart checkout, remove only products that were actually paid for.
+    if order_rows and order_rows[0].get("checkout_source") == "DIRECT":
+        return
+    product_ids = [item["product_id"] for item in items if item.get("product_id")]
     carts = client.table(CARTS_TABLE).select("cart_id").eq("customer_id", customer_id).limit(1).execute().data or []
-    if carts:
-        client.table(CART_ITEMS_TABLE).delete().eq("cart_id", carts[0]["cart_id"]).execute()
+    if carts and product_ids:
+        client.table(CART_ITEMS_TABLE).delete().eq("cart_id", carts[0]["cart_id"]).in_("product_id", product_ids).execute()
 
 
 def _mark_paid(event: dict) -> None:

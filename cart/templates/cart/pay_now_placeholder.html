@@ -16,11 +16,11 @@
     <header class="checkout-heading">
       <p class="checkout-kicker">Almost there</p>
       <h1>Checkout</h1>
-      <p>Confirm your details and order. PayHere securely collects your payment details on the next step.</p>
+      <p>{% if is_direct_purchase %}Buying this cake directly — it has not been added to your cart.{% else %}Only the cart items you selected will be paid for.{% endif %}</p>
     </header>
 
     {% if cart.has_purchasable_items %}
-    <form method="post" action="{% url 'cart:pay_now' %}" class="checkout-layout" id="checkout-form">
+    <form method="post" action="{% url 'cart:pay_now' %}" enctype="multipart/form-data" class="checkout-layout" id="checkout-form">
       {% csrf_token %}
       <div class="checkout-main">
         <section class="checkout-card" aria-labelledby="contact-heading">
@@ -49,6 +49,13 @@
               <input class="form-control" type="tel" id="checkout-phone" name="phone_number" value="{{ checkout_form.phone_number }}" autocomplete="tel" maxlength="20" required>
             </div>
           </div>
+        </section>
+
+        <section class="checkout-card" aria-labelledby="payment-heading">
+          <div class="checkout-card-heading"><span class="checkout-step" aria-hidden="true">3</span><div><h2 id="payment-heading">Payment method</h2><p>Choose secure PayHere or upload your bank-transfer slip for staff approval.</p></div></div>
+          <label class="checkout-choice"><input type="radio" name="payment_method" value="PAYHERE" checked><span class="checkout-choice-copy"><strong>PayHere</strong><small>Pay online securely; confirmation is automatic.</small></span></label>
+          <label class="checkout-choice"><input type="radio" name="payment_method" value="BANK_TRANSFER"><span class="checkout-choice-copy"><strong>Bank transfer</strong><small>Upload the transfer slip and wait for staff approval.</small></span></label>
+          <div id="bank-slip-fields" hidden style="margin-top:1rem;"><p class="form-hint">{{ bank_transfer_details }}</p><label class="form-label" for="bank-slip">Bank-transfer slip <span class="required">*</span></label><input class="form-control" type="file" id="bank-slip" name="bank_slip" accept="image/jpeg,image/png,image/webp,application/pdf"><p class="form-hint">JPG, PNG, WebP, or PDF; maximum 8 MB.</p></div>
         </section>
 
         <section class="checkout-card" aria-labelledby="fulfilment-heading">
@@ -164,7 +171,7 @@
             <div><span>Delivery</span><span id="delivery-summary">Choose delivery to calculate</span></div>
             <div class="checkout-total"><span>Total</span><strong>LKR <span id="checkout-total">{{ cart_subtotal }}</span></strong></div>
           </div>
-          <button type="submit" class="btn btn-primary btn-lg checkout-submit">Continue to PayHere <span aria-hidden="true">→</span></button>
+          <button type="submit" class="btn btn-primary btn-lg checkout-submit" id="checkout-submit">Continue to PayHere <span aria-hidden="true">→</span></button>
           <p class="checkout-back-link"><a href="{% url 'cart:cart' %}">← Return to your cart</a></p>
           <p class="checkout-summary-footnote">Your order is confirmed after PayHere sends a verified payment notification.</p>
         </div>
@@ -200,6 +207,15 @@
     const storeLongitude = Number('{{ store_longitude|escapejs }}');
     const baseFee = Number('{{ delivery_base_fee|escapejs }}');
     const ratePerKm = Number('{{ delivery_rate_per_km|escapejs }}');
+    const bankSlipFields = document.getElementById('bank-slip-fields');
+    const bankSlip = document.getElementById('bank-slip');
+    const submitButton = document.getElementById('checkout-submit');
+    function updatePaymentMethod() {
+      const bank = document.querySelector('input[name="payment_method"]:checked')?.value === 'BANK_TRANSFER';
+      bankSlipFields.hidden = !bank; bankSlip.required = bank;
+      submitButton.innerHTML = bank ? 'Submit bank slip for review' : 'Continue to PayHere <span aria-hidden="true">→</span>';
+    }
+    document.querySelectorAll('input[name="payment_method"]').forEach(input => input.addEventListener('change', updatePaymentMethod));
 
     function isDelivery() {
       return document.querySelector('input[name="delivery_type"]:checked')?.value === 'DELIVERY';
@@ -266,6 +282,7 @@
       });
     }
     updateAddressRequirements();
+    updatePaymentMethod();
 
     fetch('{{ location_api_base_url|escapejs }}/cities/byDistrict/5')
       .then(response => response.ok ? response.json() : [])

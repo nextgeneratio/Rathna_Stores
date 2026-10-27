@@ -17,7 +17,7 @@ from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import Http404, HttpResponseForbidden
+from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -57,6 +57,7 @@ from .analytics import (
     parse_report_range,
     request_product_opportunities,
 )
+from .pdf_reports import build_analytics_pdf
 from cart.payment_services import CheckoutError, confirm_offline_payment, get_pending_offline_payments
 
 logger = logging.getLogger(__name__)
@@ -432,6 +433,32 @@ def analytics(request):
         "report_end": end,
         "purchase_window_days": PURCHASE_WINDOW_DAYS,
     })
+
+
+@staff_required
+def analytics_pdf(request):
+    """Download the selected staff analytics range as a formatted PDF."""
+    try:
+        preset_days = int(request.GET.get("days", PURCHASE_WINDOW_DAYS))
+        if preset_days not in {7, 30, 90}:
+            preset_days = PURCHASE_WINDOW_DAYS
+        start, end = parse_report_range(
+            request.GET.get("start", ""), request.GET.get("end", ""), days=preset_days,
+        )
+        pdf = build_analytics_pdf(get_analytics_report(start, end))
+    except AnalyticsError as exc:
+        messages.error(request, str(exc))
+        return redirect("store_admin:analytics")
+    except Exception as exc:
+        logger.error("Staff analytics PDF generation failed: %s", exc)
+        messages.error(request, "The analytics PDF could not be generated. Please try again.")
+        return redirect("store_admin:analytics")
+
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'attachment; filename="rathna-analytics-{start.isoformat()}-to-{end.isoformat()}.pdf"'
+    )
+    return response
 
 
 # ---------------------------------------------------------------------------

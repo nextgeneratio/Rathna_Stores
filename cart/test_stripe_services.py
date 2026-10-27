@@ -1,8 +1,9 @@
 from unittest.mock import MagicMock, patch
+from decimal import Decimal
 
 from django.test import SimpleTestCase, override_settings
 
-from .stripe_services import CheckoutError, create_checkout_session, handle_webhook
+from .stripe_services import CheckoutError, _cart_for_checkout, _missing_delivery_distance_column, create_checkout_session, handle_webhook
 
 
 class StripeConfigurationTests(SimpleTestCase):
@@ -20,6 +21,35 @@ class StripeConfigurationTests(SimpleTestCase):
 
 
 class StripeCheckoutServiceTests(SimpleTestCase):
+    def test_missing_delivery_distance_column_is_identified_for_compatibility_retry(self):
+        self.assertTrue(_missing_delivery_distance_column(
+            Exception("column orders.delivery_distance_km does not exist")
+        ))
+        self.assertFalse(_missing_delivery_distance_column(Exception("network unavailable")))
+
+    @patch("cart.stripe_services.get_cart")
+    def test_selected_checkout_recalculates_subtotal_from_selected_items(self, mock_cart):
+        mock_cart.return_value = {
+            "items": [
+                {"cart_item_id": "selected", "line_total": "1900.00", "quantity": 1, "effective_qty": 1, "is_available": True},
+                {"cart_item_id": "not-selected", "line_total": "500.00", "quantity": 1, "effective_qty": 1, "is_available": True},
+            ],
+            "subtotal": "2400.00",
+            "total_units": 2,
+            "has_purchasable_items": True,
+        }
+        from customers.services import CUSTOMER_ID_SESSION_KEY
+
+        cart, customer_id = _cart_for_checkout({
+            CUSTOMER_ID_SESSION_KEY: "customer-1",
+            "checkout_selected_cart_item_ids": ["selected"],
+        })
+
+        self.assertEqual(customer_id, "customer-1")
+        self.assertEqual(cart["subtotal"], Decimal("1900.00"))
+        self.assertEqual(cart["total_units"], 1)
+        self.assertEqual([item["cart_item_id"] for item in cart["items"]], ["selected"])
+
     @override_settings(STRIPE_TEST_MODE=True, STRIPE_SECRET_KEY="sk_test_example")
     @patch("cart.stripe_services.stripe.checkout.Session.create")
     @patch("cart.stripe_services.get_supabase_client")

@@ -12,6 +12,7 @@ urlpatterns = [
     path("add/", views.cart_add, name="add"),
     path("update/", views.cart_update, name="update"),
     path("remove/", views.cart_remove, name="remove"),
+    path("buy-now/", views.buy_now, name="buy_now"),
 
     # Stripe test-mode checkout
     path("pay/", views.pay_now_placeholder, name="pay_now"),

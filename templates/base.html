@@ -7,7 +7,7 @@
   <meta name="description" content="{% block meta_description %}Rathna Stores — handcrafted cakes for every occasion.{% endblock %}" />
   <title>{% block title %}Rathna Stores{% endblock %}</title>
   {% load static %}
-  <link rel="stylesheet" href="{% static 'css/rathna.css' %}?v=mobile-orders-1" />
+  <link rel="stylesheet" href="{% static 'css/rathna.css' %}?v=order-status-mobile-1" />
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -306,9 +306,31 @@
     }
 
     function addChatMessage(text, role) {
-      var message = document.createElement('p');
+      var message = document.createElement('div');
       message.className = 'shop-chat-message shop-chat-message--' + role;
-      message.textContent = text.replace(/\*\*|__/g, '');
+      var lines = text.replace(/\*\*|__/g, '').split(/\r?\n/);
+      var list;
+
+      lines.forEach(function (line) {
+        var bullet = line.match(/^\s*(?:[-*•]|\d+[.)])\s+(.+)/);
+        if (bullet) {
+          if (!list) {
+            list = document.createElement('ul');
+            list.className = 'shop-chat-list';
+            message.appendChild(list);
+          }
+          var item = document.createElement('li');
+          item.textContent = bullet[1].replace(/\s*\|\s*/g, ' · ');
+          list.appendChild(item);
+          return;
+        }
+
+        list = null;
+        if (!line.trim()) return;
+        var paragraph = document.createElement('p');
+        paragraph.textContent = line.replace(/\s*\|\s*/g, ' · ');
+        message.appendChild(paragraph);
+      });
       chatMessages.appendChild(message);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }

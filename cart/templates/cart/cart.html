@@ -42,6 +42,9 @@
         {% endif %}
         {% endif %}{% endfor %}
 
+        <form method="get" action="{% url 'cart:pay_now' %}" id="selected-checkout-form">
+          <input type="hidden" name="selection" value="1" />
+        </form>
         <div class="cart-items-list" role="list" aria-label="Cart items">
           {% for item in cart.items %}
           <article class="cart-item {% if not item.is_available %}cart-item--unavailable{% endif %}"
@@ -63,6 +66,13 @@
 
             <!-- Item details -->
             <div class="cart-item-details">
+              {% if item.is_available %}
+              <label style="display:inline-flex;gap:.45rem;align-items:center;margin-bottom:.75rem;font-size:.9rem;">
+                <input type="checkbox" name="items" value="{{ item.cart_item_id }}" form="selected-checkout-form"
+                       data-payment-item data-line-total="{{ item.line_total }}" data-units="{{ item.effective_qty }}" checked>
+                Select for payment
+              </label>
+              {% endif %}
               <div class="cart-item-header">
                 <div>
                   <a href="{% url 'cakes:product_detail' product_id=item.product_id %}"
@@ -161,8 +171,8 @@
           <h2 class="cart-summary-title">Order summary</h2>
 
           <div class="cart-summary-row">
-            <span>Subtotal ({{ cart.total_units }} unit{{ cart.total_units|pluralize }})</span>
-            <span class="cart-summary-amount">{{ cart.subtotal_display }}</span>
+            <span id="selected-subtotal-label">Subtotal ({{ cart.total_units }} unit{{ cart.total_units|pluralize }})</span>
+            <span class="cart-summary-amount" id="selected-subtotal" aria-live="polite">{{ cart.subtotal_display }}</span>
           </div>
           <div class="cart-summary-row cart-summary-row--muted">
             <span>Delivery</span>
@@ -170,15 +180,11 @@
           </div>
           <div class="cart-summary-row cart-summary-total">
             <span>Estimated total</span>
-            <span class="cart-summary-amount">{{ cart.subtotal_display }}</span>
+            <span class="cart-summary-amount" id="selected-total" aria-live="polite">{{ cart.subtotal_display }}</span>
           </div>
 
           {% if cart.has_purchasable_items %}
-          <a href="{% url 'cart:pay_now' %}"
-             class="btn btn-primary btn-lg cart-paynow-btn"
-             aria-describedby="paynow-note">
-            Proceed to checkout
-          </a>
+          <button form="selected-checkout-form" type="submit" class="btn btn-primary btn-lg cart-paynow-btn" id="pay-selected-items" aria-describedby="paynow-note">Pay selected items</button>
           <p class="cart-paynow-note" id="paynow-note" role="note">
             Secure payments are processed by PayHere.
           </p>
@@ -244,6 +250,47 @@
       input.addEventListener('input', syncButtons);
       syncButtons();
     });
+  })();
+
+  /* Keep the payment summary aligned with the selected cart rows. The server
+     recalculates these values again before creating the payment request. */
+  (function () {
+    var checkboxes = document.querySelectorAll('[data-payment-item]');
+    var subtotal = document.getElementById('selected-subtotal');
+    var total = document.getElementById('selected-total');
+    var label = document.getElementById('selected-subtotal-label');
+    var payButton = document.getElementById('pay-selected-items');
+    if (!checkboxes.length || !subtotal || !total || !label || !payButton) return;
+
+    function formatLkr(amount) {
+      return 'LKR ' + amount.toLocaleString('en-LK', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      });
+    }
+
+    function updateSelectedSummary() {
+      var amount = 0;
+      var units = 0;
+      var selectedCount = 0;
+      checkboxes.forEach(function (checkbox) {
+        if (!checkbox.checked) return;
+        amount += Number(checkbox.dataset.lineTotal) || 0;
+        units += Number(checkbox.dataset.units) || 0;
+        selectedCount += 1;
+      });
+      var unitLabel = units === 1 ? 'unit' : 'units';
+      label.textContent = 'Subtotal (' + units + ' ' + unitLabel + ')';
+      subtotal.textContent = formatLkr(amount);
+      total.textContent = formatLkr(amount);
+      payButton.disabled = selectedCount === 0;
+      payButton.setAttribute('aria-disabled', String(selectedCount === 0));
+    }
+
+    checkboxes.forEach(function (checkbox) {
+      checkbox.addEventListener('change', updateSelectedSummary);
+    });
+    updateSelectedSummary();
   })();
 </script>
 {% endblock %}

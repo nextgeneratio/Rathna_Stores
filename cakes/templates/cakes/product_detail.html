@@ -149,6 +149,7 @@
               <button type="submit" class="btn btn-primary btn-lg">
                 Add to cart
               </button>
+              <button type="submit" formaction="{% url 'cart:buy_now' %}" class="btn btn-ghost btn-lg">Buy now</button>
             </div>
           </form>
           {% else %}

@@ -428,6 +428,10 @@
                   Add to cart
                 </button>
               </form>
+              <form method="post" action="{% url 'cart:buy_now' %}" style="margin-top:.5rem;">
+                {% csrf_token %}<input type="hidden" name="product_id" value="{{ product.product_id }}" /><input type="hidden" name="quantity" value="1" />
+                <button type="submit" class="btn btn-ghost btn-sm card-add-btn">Buy now</button>
+              </form>
             </div>
             {% endif %}
           </li>

@@ -1,4 +1,9 @@
 -- Supabase Storage RLS policies for Rathna Stores.
+-- Bank slips are intentionally private. Django uploads and staff review use the
+-- server-side service-role client, so no browser-facing policy is created.
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('Bank_Slip', 'Bank_Slip', false)
+ON CONFLICT (id) DO UPDATE SET public = false;
 -- Run this in the Supabase SQL Editor after creating the User_Profile bucket.
 -- Profile objects must use: customers/<customers.customer_id>/profile.<ext>
 
